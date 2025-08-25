@@ -1,0 +1,26 @@
+version: '3.8'
+# Compatible with both Podman Compose and Docker Compose
+
+services:
+  morphcards:
+    build: .
+    ports:
+      - "7860:7860"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    
+  # Optional: Add Redis for session management in the future
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+
+volumes:
+  data:

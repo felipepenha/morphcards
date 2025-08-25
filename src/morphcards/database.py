@@ -1,0 +1,219 @@
+"""Database module for storing vocabulary and cards."""
+
+from typing import List, Optional, Dict, Any
+from datetime import datetime
+import duckdb
+from pathlib import Path
+
+from .core import Card, ReviewLog
+
+
+class VocabularyDatabase:
+    """In-memory database for storing learned vocabulary and cards."""
+    
+    def __init__(self, db_path: Optional[str] = None):
+        """Initialize database connection."""
+        self.db_path = db_path or ":memory:"
+        self.connection = duckdb.connect(self.db_path)
+        self._create_tables()
+    
+    def _create_tables(self) -> None:
+        """Create necessary database tables."""
+        # Cards table
+        self.connection.execute("""
+            CREATE TABLE IF NOT EXISTS cards (
+                id VARCHAR PRIMARY KEY,
+                word VARCHAR NOT NULL,
+                sentence VARCHAR NOT NULL,
+                original_sentence VARCHAR NOT NULL,
+                stability DOUBLE NOT NULL,
+                difficulty DOUBLE NOT NULL,
+                due_date TIMESTAMP NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                last_reviewed TIMESTAMP,
+                review_count INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        
+        # Review logs table
+        self.connection.execute("""
+            CREATE TABLE IF NOT EXISTS review_logs (
+                id INTEGER PRIMARY KEY,
+                card_id VARCHAR NOT NULL,
+                review_time TIMESTAMP NOT NULL,
+                rating INTEGER NOT NULL,
+                interval DOUBLE NOT NULL,
+                stability DOUBLE NOT NULL,
+                difficulty DOUBLE NOT NULL,
+                FOREIGN KEY (card_id) REFERENCES cards(id)
+            )
+        """)
+        
+        # Vocabulary table
+        self.connection.execute("""
+            CREATE TABLE IF NOT EXISTS vocabulary (
+                word VARCHAR PRIMARY KEY,
+                first_seen TIMESTAMP NOT NULL,
+                last_reviewed TIMESTAMP,
+                review_count INTEGER NOT NULL DEFAULT 0,
+                mastery_level INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+    
+    def add_card(self, card: Card) -> None:
+        """Add a new card to the database."""
+        self.connection.execute("""
+            INSERT OR REPLACE INTO cards 
+            (id, word, sentence, original_sentence, stability, difficulty, 
+             due_date, created_at, last_reviewed, review_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            card.id, card.word, card.sentence, card.original_sentence,
+            card.stability, card.difficulty, card.due_date, card.created_at,
+            card.last_reviewed, card.review_count
+        ))
+        
+        # Add word to vocabulary if not exists
+        self.connection.execute("""
+            INSERT OR IGNORE INTO vocabulary (word, first_seen)
+            VALUES (?, ?)
+        """, (card.word, card.created_at))
+    
+    def update_card(self, card: Card) -> None:
+        """Update an existing card."""
+        self.add_card(card)  # INSERT OR REPLACE handles updates
+    
+    def get_card(self, card_id: str) -> Optional[Card]:
+        """Retrieve a card by ID."""
+        result = self.connection.execute("""
+            SELECT id, word, sentence, original_sentence, stability, difficulty,
+                   due_date, created_at, last_reviewed, review_count
+            FROM cards WHERE id = ?
+        """, (card_id,)).fetchone()
+        
+        if result:
+            return Card(
+                id=result[0],
+                word=result[1],
+                sentence=result[2],
+                original_sentence=result[3],
+                stability=result[4],
+                difficulty=result[5],
+                due_date=result[6],
+                created_at=result[7],
+                last_reviewed=result[8],
+                review_count=result[9],
+            )
+        return None
+    
+    def get_due_cards(self, now: datetime) -> List[Card]:
+        """Get all cards due for review."""
+        results = self.connection.execute("""
+            SELECT id, word, sentence, original_sentence, stability, difficulty,
+                   due_date, created_at, last_reviewed, review_count
+            FROM cards WHERE due_date <= ?
+        """, (now,)).fetchall()
+        
+        cards = []
+        for result in results:
+            card = Card(
+                id=result[0],
+                word=result[1],
+                sentence=result[2],
+                original_sentence=result[3],
+                stability=result[4],
+                difficulty=result[5],
+                due_date=result[6],
+                created_at=result[7],
+                last_reviewed=result[8],
+                review_count=result[9],
+            )
+            cards.append(card)
+        
+        return cards
+    
+    def add_review_log(self, review_log: ReviewLog) -> None:
+        """Add a review log entry."""
+        self.connection.execute("""
+            INSERT INTO review_logs 
+            (card_id, review_time, rating, interval, stability, difficulty)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            review_log.card_id, review_log.review_time, review_log.rating.value,
+            review_log.interval, review_log.stability, review_log.difficulty
+        ))
+        
+        # Update vocabulary review count
+        self.connection.execute("""
+            UPDATE vocabulary 
+            SET last_reviewed = ?, review_count = review_count + 1
+            WHERE word = (SELECT word FROM cards WHERE id = ?)
+        """, (review_log.review_time, review_log.card_id))
+    
+    def get_review_history(self, card_id: Optional[str] = None) -> List[ReviewLog]:
+        """Get review history, optionally filtered by card ID."""
+        if card_id:
+            results = self.connection.execute("""
+                SELECT card_id, review_time, rating, interval, stability, difficulty
+                FROM review_logs WHERE card_id = ?
+                ORDER BY review_time DESC
+            """, (card_id,)).fetchall()
+        else:
+            results = self.connection.execute("""
+                SELECT card_id, review_time, rating, interval, stability, difficulty
+                FROM review_logs ORDER BY review_time DESC
+            """).fetchall()
+        
+        review_logs = []
+        for result in results:
+            review_log = ReviewLog(
+                card_id=result[0],
+                review_time=result[1],
+                rating=result[2],
+                interval=result[3],
+                stability=result[4],
+                difficulty=result[5],
+            )
+            review_logs.append(review_log)
+        
+        return review_logs
+    
+    def get_learned_vocabulary(self) -> List[str]:
+        """Get list of all learned words."""
+        results = self.connection.execute("""
+            SELECT word FROM vocabulary ORDER BY first_seen
+        """).fetchall()
+        
+        return [result[0] for result in results]
+    
+    def get_vocabulary_stats(self) -> Dict[str, Any]:
+        """Get vocabulary statistics."""
+        total_words = self.connection.execute("""
+            SELECT COUNT(*) FROM vocabulary
+        """).fetchone()[0]
+        
+        total_cards = self.connection.execute("""
+            SELECT COUNT(*) FROM cards
+        """).fetchone()[0]
+        
+        total_reviews = self.connection.execute("""
+            SELECT COUNT(*) FROM review_logs
+        """).fetchone()[0]
+        
+        return {
+            "total_words": total_words,
+            "total_cards": total_cards,
+            "total_reviews": total_reviews,
+        }
+    
+    def close(self) -> None:
+        """Close database connection."""
+        self.connection.close()
+    
+    def __enter__(self) -> 'VocabularyDatabase':
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Context manager exit."""
+        self.close()
