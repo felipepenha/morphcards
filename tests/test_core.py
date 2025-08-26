@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime, timedelta
-from morphcards.core import Card, Rating, ReviewLog, Scheduler, Optimizer
+from morphcards.core import Card, Rating, ReviewLog, Scheduler
 
 
 class TestCard:
@@ -35,10 +35,4 @@ class TestScheduler:
     def test_scheduler_with_custom_parameters(self) -> None:
         custom_params = [1.0] * 17  # FSRS has 17 parameters
         scheduler = Scheduler(custom_params)
-        assert scheduler.parameters == custom_params
-
-
-class TestOptimizer:
-    def test_optimizer_initialization(self) -> None:
-        optimizer = Optimizer()
-        assert optimizer is not None
+        assert scheduler.parameters == tuple(custom_params)

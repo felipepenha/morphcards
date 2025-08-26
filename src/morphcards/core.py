@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Union, Tuple, TYPE_CHECKING
 from enum import IntEnum
 
-import fsrs
+from fsrs import Scheduler
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -50,13 +50,20 @@ class ReviewLog(BaseModel):
         arbitrary_types_allowed = True
 
 
-class Scheduler:
+class FSRSScheduler:
     """FSRS-based scheduler for spaced repetition."""
     
     def __init__(self, parameters: Optional[List[float]] = None):
         """Initialize scheduler with optional custom parameters."""
-        self.parameters = parameters or fsrs.default_parameters()
-        self._fsrs = fsrs.FSRS(self.parameters)
+        if parameters is None:
+            # Default parameters for FSRS v4.0.0
+            default_fsrs_parameters = (
+                0.4072, 1.1829, 3.1262, 15.4722, 7.2102, 0.5316, 1.0651, 0.0234, 1.616, 0.1544,
+                1.0824, 1.9813, 0.0953, 0.2975, 2.2042, 0.2407, 2.9466, 0.5034, 0.6567,
+            )
+            self._fsrs = Scheduler(parameters=default_fsrs_parameters)
+        else:
+            self._fsrs = Scheduler(parameters=parameters)
     
     def review_card(
         self,
@@ -152,47 +159,3 @@ class Scheduler:
         except Exception:
             # Fallback to original sentence on any error
             return original_sentence
-
-
-class Optimizer:
-    """FSRS parameter optimizer based on review history."""
-    
-    def __init__(self):
-        """Initialize the optimizer."""
-        self._optimizer = fsrs.Optimizer()
-    
-    def optimize_parameters(
-        self,
-        review_history: List[ReviewLog],
-        timezone: str = "UTC",
-        desired_retention: float = 0.9,
-    ) -> List[float]:
-        """
-        Optimize FSRS parameters based on review history.
-        
-        Args:
-            review_history: List of past review logs
-            timezone: User's timezone
-            desired_retention: Target retention rate (0.8-0.95)
-            
-        Returns:
-            Optimized parameter list for the scheduler
-        """
-        # Convert review history to FSRS format
-        fsrs_reviews = []
-        for review in review_history:
-            fsrs_review = fsrs.ReviewLog(
-                card_id=review.card_id,
-                review_time=review.review_time,
-                rating=review.rating.value,
-                review_duration=0,  # Not tracked in our system
-            )
-            fsrs_reviews.append(fsrs_review)
-        
-        # Run optimization
-        optimal_parameters = self._optimizer.optimize(
-            fsrs_reviews,
-            desired_retention=desired_retention,
-        )
-        
-        return optimal_parameters

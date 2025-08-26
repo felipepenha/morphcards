@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 import os
 
-from .core import Card, Rating, Scheduler, Optimizer
+from .core import Card, Rating, FSRSScheduler
 from .database import VocabularyDatabase
 from .ai import AIServiceFactory
 
@@ -16,7 +16,7 @@ class MorphCardsDemo:
     def __init__(self) -> None:
         """Initialize the demo interface."""
         self.db = VocabularyDatabase()
-        self.scheduler = Scheduler()
+        self.scheduler = FSRSScheduler()
         self.current_card: Optional[Card] = None
         self.ai_service_type = "openai"
         self.api_key = ""

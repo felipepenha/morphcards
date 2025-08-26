@@ -62,11 +62,11 @@ demo-version:
 
 # Run tests
 test:
-	@echo "🧪 Running tests..."
+	@echo "🌊 Running tests..."
 	podman run --rm --env-file .env \
 		-v $(PWD):/app \
 		docker.io/library/python:3.11-slim \
-		bash -c "cd /app && pip install -e .[dev] && pytest"
+		bash -c "cd /app && pip install -e .[dev,demo] && pytest"
 
 # Clean up containers and images
 clean:

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 import os
 
-from .core import Card, Rating, Scheduler, Optimizer
+from .core import Card, Rating, Scheduler
 from .database import VocabularyDatabase
 from .ai import AIServiceFactory
 
@@ -27,15 +27,12 @@ def main() -> None:
     
     # Review command
     review_parser = subparsers.add_parser("review", help="Review due cards")
-    review_parser.add_argument("--ai-service", choices=["openai", "gemini"], 
+    review_parser.add_argument("--ai-service", choices=["openai", "gemini"],
                               default="openai", help="AI service to use")
     review_parser.add_argument("--api-key", help="API key for AI service")
     
     # Stats command
     stats_parser = subparsers.add_parser("stats", help="Show vocabulary statistics")
-    
-    # Optimize command
-    optimize_parser = subparsers.add_parser("optimize", help="Optimize FSRS parameters")
     
     args = parser.parse_args()
     
@@ -53,8 +50,6 @@ def main() -> None:
             review_cards(db, args.ai_service, args.api_key)
         elif args.command == "stats":
             show_stats(db)
-        elif args.command == "optimize":
-            optimize_parameters(db)
         else:
             parser.print_help()
             sys.exit(1)
@@ -151,30 +146,6 @@ def show_stats(db: VocabularyDatabase) -> None:
     print(f"Total words learned: {stats['total_words']}")
     print(f"Total cards: {stats['total_cards']}")
     print(f"Total reviews: {stats['total_reviews']}")
-
-
-def optimize_parameters(db: VocabularyDatabase) -> None:
-    """Optimize FSRS parameters based on review history."""
-    review_history = db.get_review_history()
-    
-    if len(review_history) < 10:
-        print("Need at least 10 reviews to optimize parameters")
-        return
-    
-    print("Optimizing FSRS parameters...")
-    optimizer = Optimizer()
-    
-    try:
-        optimal_params = optimizer.optimize_parameters(review_history)
-        print("Optimal parameters:")
-        for i, param in enumerate(optimal_params):
-            print(f"  Parameter {i+1}: {param:.6f}")
-        
-        print("\nYou can use these parameters when initializing the Scheduler:")
-        print(f"  scheduler = Scheduler(parameters={optimal_params})")
-        
-    except Exception as e:
-        print(f"Error during optimization: {e}")
 
 
 if __name__ == "__main__":
