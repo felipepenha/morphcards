@@ -2,14 +2,21 @@
 # Optimized for Podman (compatible with Docker)
 FROM python:3.11-slim
 
+# Create a non-root user and switch to it
+RUN adduser --system --group appuser
+USER appuser
+
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Use root temporarily for apt-get, then switch back
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
+USER appuser
 
 # Copy project files
 COPY pyproject.toml ./
