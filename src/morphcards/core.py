@@ -6,7 +6,7 @@ from enum import IntEnum
 import uuid # Added import for uuid
 
 from fsrs import Scheduler, Card as FSRS_Card, Rating as FSRS_Rating, State # Import State directly
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 if TYPE_CHECKING:
     from .database import VocabularyDatabase
@@ -35,8 +35,7 @@ class Card(BaseModel):
     review_count: int = Field(default=0, description="Number of times reviewed")
     state: State = Field(default=State.Learning, description="FSRS state")
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class ReviewLog(BaseModel):
@@ -49,8 +48,7 @@ class ReviewLog(BaseModel):
     stability: float = Field(..., description="Card stability after review")
     difficulty: float = Field(..., description="Card difficulty after review")
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class FSRSScheduler:
