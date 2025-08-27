@@ -166,5 +166,5 @@ data/
 *.db
 *.duckdb
 
-# Cursor IDE
-.cursor/
+# To Do List
+.ai/todo.md
