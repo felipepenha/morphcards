@@ -1,14 +1,14 @@
 """Command-line interface for MorphCards."""
 
 import argparse
+import os
 import sys
 from datetime import datetime
 from typing import Optional
-import os
 
+from .ai import AIServiceFactory
 from .core import Card, Rating, Scheduler
 from .database import VocabularyDatabase
-from .ai import AIServiceFactory
 
 
 def main() -> None:
@@ -16,33 +16,39 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="MorphCards: Spaced repetition with AI-generated sentence variations (Podman-ready)"
     )
-    
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    
+
     # Add card command
     add_parser = subparsers.add_parser("add", help="Add a new card")
     add_parser.add_argument("word", help="Word to learn")
     add_parser.add_argument("sentence", help="Sentence containing the word")
-    add_parser.add_argument("--language", default="English", help="Language of the card")
-    
+    add_parser.add_argument(
+        "--language", default="English", help="Language of the card"
+    )
+
     # Review command
     review_parser = subparsers.add_parser("review", help="Review due cards")
-    review_parser.add_argument("--ai-service", choices=["openai", "gemini"],
-                              default="openai", help="AI service to use")
+    review_parser.add_argument(
+        "--ai-service",
+        choices=["openai", "gemini"],
+        default="openai",
+        help="AI service to use",
+    )
     review_parser.add_argument("--api-key", help="API key for AI service")
-    
+
     # Stats command
     stats_parser = subparsers.add_parser("stats", help="Show vocabulary statistics")
-    
+
     args = parser.parse_args()
-    
+
     if not args.command:
         parser.print_help()
         sys.exit(1)
-    
+
     # Initialize database
     db = VocabularyDatabase()
-    
+
     try:
         if args.command == "add":
             add_card(db, args.word, args.sentence, args.language)
@@ -60,7 +66,7 @@ def main() -> None:
 def add_card(db: VocabularyDatabase, word: str, sentence: str, language: str) -> None:
     """Add a new card to the database."""
     from datetime import datetime, timedelta
-    
+
     card = Card(
         id=f"{word}_{datetime.now().timestamp()}",
         word=word,
@@ -71,39 +77,43 @@ def add_card(db: VocabularyDatabase, word: str, sentence: str, language: str) ->
         due_date=datetime.now(),
         created_at=datetime.now(),
     )
-    
+
     db.add_card(card)
     print(f"Added card for word: {word}")
     print(f"Sentence: {sentence}")
 
 
-def review_cards(db: VocabularyDatabase, ai_service_type: str, api_key: Optional[str]) -> None:
+def review_cards(
+    db: VocabularyDatabase, ai_service_type: str, api_key: Optional[str]
+) -> None:
     """Review due cards."""
     if not api_key:
         api_key = os.getenv(f"{ai_service_type.upper()}_API_KEY")
         if not api_key:
             print(f"Error: No API key provided for {ai_service_type}")
-            print(f"Set {ai_service_type.upper()}_API_KEY environment variable or use --api-key")
+            print(
+                f"Set {ai_service_type.upper()}_API_KEY environment variable or use --api-key"
+            )
             return
-    
+
     # Get due cards
     now = datetime.now()
     due_cards = db.get_due_cards(now)
-    
+
     if not due_cards:
         print("No cards due for review!")
         return
-    
+
     print(f"Found {len(due_cards)} cards due for review")
-    
+
     # Initialize scheduler and AI service
     scheduler = Scheduler()
     ai_service = AIServiceFactory.create_service(ai_service_type)
-    
+
     for card in due_cards:
         print(f"\n--- Reviewing: {card.word} ---")
         print(f"Current sentence: {card.sentence}")
-        
+
         # Get user rating
         while True:
             try:
@@ -117,7 +127,7 @@ def review_cards(db: VocabularyDatabase, ai_service_type: str, api_key: Optional
                     print("Please enter a number between 1 and 4")
             except ValueError:
                 print("Please enter a valid number")
-        
+
         # Process review
         updated_card, review_log = scheduler.review_card(
             card=card,
@@ -127,11 +137,11 @@ def review_cards(db: VocabularyDatabase, ai_service_type: str, api_key: Optional
             vocabulary_database=db,
             ai_service=ai_service,
         )
-        
+
         # Update database
         db.update_card(updated_card)
         db.add_review_log(review_log)
-        
+
         print(f"New sentence: {updated_card.sentence}")
         print(f"Next review: {updated_card.due_date}")
         print(f"Stability: {updated_card.stability:.2f}")
@@ -141,7 +151,7 @@ def review_cards(db: VocabularyDatabase, ai_service_type: str, api_key: Optional
 def show_stats(db: VocabularyDatabase) -> None:
     """Show vocabulary statistics."""
     stats = db.get_vocabulary_stats()
-    
+
     print("=== Vocabulary Statistics ===")
     print(f"Total words learned: {stats['total_words']}")
     print(f"Total cards: {stats['total_cards']}")

@@ -1,7 +1,9 @@
 """Unit tests for core module."""
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from morphcards.core import Card, Rating, ReviewLog, Scheduler
 
 
@@ -12,7 +14,7 @@ class TestCard:
             word="hello",
             sentence="Hello world!",
             original_sentence="Hello world!",
-            due_date=datetime.now()
+            due_date=datetime.now(),
         )
         assert card.word == "hello"
         assert card.sentence == "Hello world!"
@@ -31,7 +33,7 @@ class TestScheduler:
     def test_scheduler_initialization(self) -> None:
         scheduler = Scheduler()
         assert scheduler.parameters is not None
-        
+
     def test_scheduler_with_custom_parameters(self) -> None:
         custom_params = [1.0] * 17  # FSRS has 17 parameters
         scheduler = Scheduler(custom_params)
