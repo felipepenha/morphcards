@@ -1,7 +1,7 @@
 # MorphCards Makefile
 # Assumes podman is being used (compatible with docker)
 
-.PHONY: help build run demo test clean all install-dev install-demo
+.PHONY: help build run demo test clean all install-dev install-demo mypy
 
 # Default target
 help:
@@ -63,10 +63,18 @@ demo-version:
 # Run tests
 test:
 	@echo "🌊 Running tests..."
-	podman run --rm --env-file .env \
+	podman run -q --rm --env-file .env \
 		-v $(PWD):/app \
 		docker.io/library/python:3.11-slim \
-		bash -c "cd /app && pip install -e .[dev,demo] && pytest"
+		bash -c "cd /app && pip -q install -e .[dev,demo] && pytest"
+
+# Run mypy
+mypy:
+	@echo "🔍 Running mypy..."
+	podman run --rm \
+		-v $(PWD):/app \
+		docker.io/library/python:3.11-slim \
+		bash -c "cd /app && pip install -e .[dev] && mypy src/morphcards/core.py"
 
 # Clean up containers and images
 clean:

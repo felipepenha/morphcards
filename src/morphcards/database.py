@@ -26,8 +26,8 @@ class VocabularyDatabase:
                 word VARCHAR NOT NULL,
                 sentence VARCHAR NOT NULL,
                 original_sentence VARCHAR NOT NULL,
-                stability DOUBLE NOT NULL,
-                difficulty DOUBLE NOT NULL,
+                stability DOUBLE,
+                difficulty DOUBLE,
                 due_date TIMESTAMP NOT NULL,
                 created_at TIMESTAMP NOT NULL,
                 last_reviewed TIMESTAMP,
@@ -38,7 +38,7 @@ class VocabularyDatabase:
         # Review logs table
         self.connection.execute("""
             CREATE TABLE IF NOT EXISTS review_logs (
-                id INTEGER PRIMARY KEY,
+                id VARCHAR PRIMARY KEY,
                 card_id VARCHAR NOT NULL,
                 review_time TIMESTAMP NOT NULL,
                 rating INTEGER NOT NULL,
@@ -136,10 +136,10 @@ class VocabularyDatabase:
         """Add a review log entry."""
         self.connection.execute("""
             INSERT INTO review_logs 
-            (card_id, review_time, rating, interval, stability, difficulty)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (id, card_id, review_time, rating, interval, stability, difficulty)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
-            review_log.card_id, review_log.review_time, review_log.rating.value,
+            review_log.id, review_log.card_id, review_log.review_time, review_log.rating.value,
             review_log.interval, review_log.stability, review_log.difficulty
         ))
         
@@ -154,25 +154,26 @@ class VocabularyDatabase:
         """Get review history, optionally filtered by card ID."""
         if card_id:
             results = self.connection.execute("""
-                SELECT card_id, review_time, rating, interval, stability, difficulty
+                SELECT id, card_id, review_time, rating, interval, stability, difficulty
                 FROM review_logs WHERE card_id = ?
                 ORDER BY review_time DESC
             """, (card_id,)).fetchall()
         else:
             results = self.connection.execute("""
-                SELECT card_id, review_time, rating, interval, stability, difficulty
+                SELECT id, card_id, review_time, rating, interval, stability, difficulty
                 FROM review_logs ORDER BY review_time DESC
             """).fetchall()
         
         review_logs = []
         for result in results:
             review_log = ReviewLog(
-                card_id=result[0],
-                review_time=result[1],
-                rating=result[2],
-                interval=result[3],
-                stability=result[4],
-                difficulty=result[5],
+                id=result[0],
+                card_id=result[1],
+                review_time=result[2],
+                rating=result[3],
+                interval=result[4],
+                stability=result[5],
+                difficulty=result[6],
             )
             review_logs.append(review_log)
         
