@@ -74,7 +74,7 @@ test:
 # Run mypy
 mypy:
 	@echo "🔍 Running mypy..."
-	podman run --rm \
+	podman run -q --rm \
 		-v $(PWD):/app \
 		docker.io/library/python:3.11-slim \
 		bash -c "cd /app && pip install -e .[dev] && mypy src/morphcards/core.py"
@@ -82,7 +82,7 @@ mypy:
 # Run black and isort formatters
 format:
 	@echo "💅 Running black and isort..."
-	podman run --rm \
+	podman run -q --rm \
 		-v $(PWD):/app \
 		docker.io/library/python:3.11-slim \
 		bash -c "cd /app && pip install -e .[dev] && black src/ tests/ && isort src/ tests/"
@@ -90,8 +90,8 @@ format:
 # Run security scans (Trivy and pip-audit)
 audit:
 	@echo "🔍 Running security audits (Trivy and pip-audit)..."
-	podman run --rm -v $(PWD):/app aquasec/trivy fs --scanners vuln,secret,config --severity HIGH,CRITICAL /app
-	podman run --rm -v $(PWD):/app docker.io/library/python:3.11-slim bash -c "cd /app && pip install -e .[dev] && pip-audit"
+	podman run -q --rm -v $(PWD):/app aquasec/trivy fs --scanners vuln,secret,config --severity HIGH,CRITICAL /app
+	podman run -q --rm -v $(PWD):/app docker.io/library/python:3.11-slim bash -c "cd /app && pip install -e .[dev] && pip-audit"
 
 # Clean up containers and images
 clean:
