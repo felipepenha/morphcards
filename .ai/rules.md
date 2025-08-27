@@ -24,6 +24,8 @@
 
 - Include a way to manually run these in the `Makefile`: `black`, `isort`, `mypy`.
 
+- Include a way to manually run these in the `Makefile`: `trivy`, `pip-audit`.
+
 
 ## UI
 
