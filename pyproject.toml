@@ -45,7 +45,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
-    "ruff>=0.1.0",
+    "isort>=5.0.0",
     "pre-commit>=3.0.0",
 ]
 demo = [
@@ -68,8 +68,8 @@ packages = ["src/morphcards"]
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
-include = '\.pyi?'
+target-version = ["py38"]
+include = "\.pyi?"
 
 [tool.mypy]
 python_version = "3.8"
@@ -140,8 +140,6 @@ exclude_lines = [
 target-version = "py38"
 line-length = 88
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
     "F",  # pyflakes
     "I",  # isort
     "B",  # flake8-bugbear

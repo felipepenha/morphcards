@@ -1,7 +1,7 @@
 # MorphCards Makefile
 # Assumes podman is being used (compatible with docker)
 
-.PHONY: help build run demo test clean all install-dev install-demo mypy
+.PHONY: help build run demo test clean all install-dev install-demo mypy format
 
 # Default target
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "  make install-dev - Install development dependencies"
 	@echo "  make install-demo - Install demo dependencies"
 	@echo "  make all        - Build, run demo, and show status"
+	@echo "  make format     - Run black and isort formatters"
 	@echo ""
 	@echo "Environment:"
 	@echo "  - Ensure .env file exists with your API key"
@@ -75,6 +76,14 @@ mypy:
 		-v $(PWD):/app \
 		docker.io/library/python:3.11-slim \
 		bash -c "cd /app && pip install -e .[dev] && mypy src/morphcards/core.py"
+
+# Run black and isort formatters
+format:
+	@echo "💅 Running black and isort..."
+	podman run --rm \
+		-v $(PWD):/app \
+		docker.io/library/python:3.11-slim \
+		bash -c "cd /app && pip install -e .[dev] && black src/ tests/ && isort src/ tests/"
 
 # Clean up containers and images
 clean:
