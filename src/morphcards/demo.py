@@ -1,9 +1,10 @@
 """Demo interface for MorphCards using Gradio."""
 
 import gradio as gr
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 import os
+from dotenv import load_dotenv
 
 from .core import Card, Rating, FSRSScheduler
 from .database import VocabularyDatabase
@@ -18,23 +19,31 @@ class MorphCardsDemo:
         self.db = VocabularyDatabase()
         self.scheduler = FSRSScheduler()
         self.current_card: Optional[Card] = None
-        self.ai_service_type = "openai"
-        self.api_key = ""
-    
+        
+        load_dotenv()
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        
+        if gemini_api_key:
+            self.api_key = gemini_api_key
+            self.ai_service_type = "gemini"
+        else:
+            self.api_key = ""
+            self.ai_service_type = "openai" # Default to openai if no gemini key
+
     def add_card(self, word: str, sentence: str, language: str) -> str:
         """Add a new card."""
         if not word.strip() or not sentence.strip():
             return "Please provide both word and sentence."
         
         card = Card(
-            id=f"{word}_{datetime.now().timestamp()}",
+            id=f"{word}_{datetime.now(timezone.utc).timestamp()}",
             word=word.strip(),
             sentence=sentence.strip(),
             original_sentence=sentence.strip(),
-            stability=0.0,
-            difficulty=0.0,
-            due_date=datetime.now(),
-            created_at=datetime.now(),
+            stability=None,
+            difficulty=None,
+            due_date=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
         )
         
         self.db.add_card(card)
@@ -42,7 +51,7 @@ class MorphCardsDemo:
     
     def get_due_cards(self) -> str:
         """Get list of due cards."""
-        due_cards = self.db.get_due_cards(datetime.now())
+        due_cards = self.db.get_due_cards(datetime.now(timezone.utc))
         
         if not due_cards:
             return "No cards due for review!"
@@ -55,7 +64,7 @@ class MorphCardsDemo:
     
     def start_review(self) -> Tuple[str, str, str, str, str]:
         """Start reviewing due cards."""
-        due_cards = self.db.get_due_cards(datetime.now())
+        due_cards = self.db.get_due_cards(datetime.now(timezone.utc))
         
         if not due_cards:
             return "No cards due for review!", "", "", "", ""
@@ -92,7 +101,7 @@ class MorphCardsDemo:
             updated_card, review_log = self.scheduler.review_card(
                 card=self.current_card,
                 rating=rating,
-                now=datetime.now(),
+                now=datetime.now(timezone.utc),
                 ai_api_key=self.api_key,
                 vocabulary_database=self.db,
                 ai_service=ai_service,
@@ -102,7 +111,7 @@ class MorphCardsDemo:
             self.db.update_card(updated_card)
             self.db.add_review_log(review_log)
             
-            result = f"Review completed!\n\n"
+            result = "Review completed!\n\n"
             result += f"Word: {updated_card.word}\n"
             result += f"New sentence: {updated_card.sentence}\n"
             result += f"Next review: {updated_card.due_date.strftime('%Y-%m-%d %H:%M')}\n"
@@ -113,6 +122,8 @@ class MorphCardsDemo:
             return result
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return f"Error during review: {str(e)}"
     
     def set_api_key(self, api_key: str, service_type: str) -> str:

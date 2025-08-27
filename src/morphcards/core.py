@@ -1,10 +1,11 @@
 """Core classes for MorphCards spaced repetition system."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Union, Tuple, TYPE_CHECKING
 from enum import IntEnum
+import uuid # Added import for uuid
 
-from fsrs import Scheduler
+from fsrs import Scheduler, Card as FSRS_Card, Rating as FSRS_Rating, State # Import State directly
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -26,12 +27,13 @@ class Card(BaseModel):
     word: str = Field(..., description="The word to learn")
     sentence: str = Field(..., description="Current sentence containing the word")
     original_sentence: str = Field(..., description="Original sentence when card was created")
-    stability: float = Field(default=0.0, description="FSRS stability parameter")
-    difficulty: float = Field(default=0.0, description="FSRS difficulty parameter")
+    stability: Optional[float] = Field(default=None, description="FSRS stability parameter")
+    difficulty: Optional[float] = Field(default=None, description="FSRS difficulty parameter")
     due_date: datetime = Field(..., description="Next review date")
-    created_at: datetime = Field(default_factory=datetime.now, description="Card creation timestamp")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Card creation timestamp")
     last_reviewed: Optional[datetime] = Field(default=None, description="Last review timestamp")
     review_count: int = Field(default=0, description="Number of times reviewed")
+    state: State = Field(default=State.Learning, description="FSRS state")
     
     class Config:
         arbitrary_types_allowed = True
@@ -39,6 +41,7 @@ class Card(BaseModel):
 
 class ReviewLog(BaseModel):
     """Record of a completed review."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique identifier for the review log") # Added id field
     card_id: str = Field(..., description="ID of the reviewed card")
     review_time: datetime = Field(..., description="When the review was completed")
     rating: Rating = Field(..., description="User's rating of recall")
@@ -91,9 +94,19 @@ class FSRSScheduler:
         # Convert rating to int if it's an enum
         rating_int = rating.value if isinstance(rating, Rating) else rating
         
+        # Convert morphcards.core.Card to fsrs.Card
+        fsrs_card = FSRS_Card(
+            card_id=hash(card.id),
+            state=card.state,
+            step=card.review_count,
+            stability=card.stability,
+            difficulty=card.difficulty,
+            due=card.due_date.replace(tzinfo=timezone.utc),
+            last_review=card.last_reviewed.replace(tzinfo=timezone.utc) if card.last_reviewed else None
+        )
+
         # Get FSRS scheduling
-        scheduling_cards = self._fsrs.repeat(card, now)
-        scheduled_card = scheduling_cards[rating_int - 1].card
+        updated_fsrs_card, fsrs_review_log = self._fsrs.review_card(fsrs_card, FSRS_Rating(rating_int), now.replace(tzinfo=timezone.utc), None) # State is already set in fsrs_card
         
         # Generate new sentence using AI
         new_sentence = self._generate_new_sentence(
@@ -110,22 +123,24 @@ class FSRSScheduler:
             word=card.word,
             sentence=new_sentence,
             original_sentence=card.original_sentence,
-            stability=scheduled_card.stability,
-            difficulty=scheduled_card.difficulty,
-            due_date=scheduled_card.due,
+            stability=updated_fsrs_card.stability,
+            difficulty=updated_fsrs_card.difficulty,
+            due_date=updated_fsrs_card.due,
             created_at=card.created_at,
             last_reviewed=now,
             review_count=card.review_count + 1,
+            state=updated_fsrs_card.state,
         )
         
         # Create review log
         review_log = ReviewLog(
+            id=str(uuid.uuid4()), # Generate a unique ID for the review log
             card_id=card.id,
             review_time=now,
             rating=Rating(rating_int),
-            interval=scheduled_card.interval,
-            stability=scheduled_card.stability,
-            difficulty=scheduled_card.difficulty,
+            interval=(updated_fsrs_card.due - updated_fsrs_card.last_review).days if updated_fsrs_card.last_review else 0,
+            stability=updated_fsrs_card.stability,
+            difficulty=updated_fsrs_card.difficulty,
         )
         
         return updated_card, review_log
