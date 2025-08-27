@@ -138,9 +138,9 @@ class FSRSScheduler:
                 0.5034,
                 0.6567,
             )
-            self._fsrs = Scheduler(parameters=default_fsrs_parameters)
+            self._fsrs: Scheduler = Scheduler(parameters=default_fsrs_parameters)
         else:
-            self._fsrs = Scheduler(parameters=parameters)
+            self._fsrs: Scheduler = Scheduler(parameters=parameters)
 
     def review_card(
         self,

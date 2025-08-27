@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import duckdb
+from duckdb import DuckDBPyConnection
 
 from .core import Card, ReviewLog
 
@@ -23,7 +24,7 @@ class VocabularyDatabase:
             db_path: Optional path to a DuckDB file. If None, an in-memory database is used.
         """
         self.db_path = db_path or ":memory:"
-        self.connection = duckdb.connect(self.db_path)
+        self.connection: DuckDBPyConnection = duckdb.connect(self.db_path)
         self._create_tables()
 
     def _create_tables(self) -> None:
