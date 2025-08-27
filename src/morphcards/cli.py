@@ -12,7 +12,11 @@ from .database import VocabularyDatabase
 
 
 def main() -> None:
-    """Main CLI entry point."""
+    """Main entry point for the MorphCards command-line interface.
+
+    Parses command-line arguments and dispatches to the appropriate
+    function (add, review, stats).
+    """
     parser = argparse.ArgumentParser(
         description="MorphCards: Spaced repetition with AI-generated sentence variations (Podman-ready)"
     )
@@ -64,7 +68,14 @@ def main() -> None:
 
 
 def add_card(db: VocabularyDatabase, word: str, sentence: str, language: str) -> None:
-    """Add a new card to the database."""
+    """Adds a new flashcard to the database.
+
+    Args:
+        db: The VocabularyDatabase instance.
+        word: The word to be learned.
+        sentence: A sentence containing the word.
+        language: The language of the card (e.g., "English").
+    """
     from datetime import datetime, timedelta
 
     card = Card(
@@ -86,7 +97,13 @@ def add_card(db: VocabularyDatabase, word: str, sentence: str, language: str) ->
 def review_cards(
     db: VocabularyDatabase, ai_service_type: str, api_key: Optional[str]
 ) -> None:
-    """Review due cards."""
+    """Initiates a review session for due cards.
+
+    Args:
+        db: The VocabularyDatabase instance.
+        ai_service_type: The type of AI service to use ("openai" or "gemini").
+        api_key: The API key for the AI service. Can be None if loaded from environment.
+    """
     if not api_key:
         api_key = os.getenv(f"{ai_service_type.upper()}_API_KEY")
         if not api_key:
@@ -149,7 +166,11 @@ def review_cards(
 
 
 def show_stats(db: VocabularyDatabase) -> None:
-    """Show vocabulary statistics."""
+    """Displays vocabulary statistics.
+
+    Args:
+        db: The VocabularyDatabase instance.
+    """
     stats = db.get_vocabulary_stats()
 
     print("=== Vocabulary Statistics ===")

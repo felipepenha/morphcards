@@ -16,7 +16,14 @@ if TYPE_CHECKING:
 
 
 class Rating(IntEnum):
-    """User rating for card recall."""
+    """Represents the user's recall rating for a flashcard.
+
+    Attributes:
+        AGAIN: The user forgot the card (rating 1).
+        HARD: The user had difficulty recalling the card (rating 2).
+        GOOD: The user recalled the card well (rating 3).
+        EASY: The user recalled the card easily (rating 4).
+    """
 
     AGAIN = 1
     HARD = 2
@@ -25,7 +32,21 @@ class Rating(IntEnum):
 
 
 class Card(BaseModel):
-    """Represents a flashcard with word and sentence."""
+    """Represents a flashcard in the spaced repetition system.
+
+    Attributes:
+        id: Unique identifier for the card.
+        word: The word or phrase to be learned.
+        sentence: The current sentence associated with the word.
+        original_sentence: The original sentence used when the card was created.
+        stability: FSRS stability parameter, indicating how well the card is learned.
+        difficulty: FSRS difficulty parameter, indicating the inherent difficulty of the card.
+        due_date: The next scheduled review date for the card.
+        created_at: Timestamp when the card was created.
+        last_reviewed: Timestamp of the last review.
+        review_count: The number of times the card has been reviewed.
+        state: The current FSRS state of the card (New, Learning, Review, Relearning).
+    """
 
     id: str = Field(..., description="Unique identifier for the card")
     word: str = Field(..., description="The word to learn")
@@ -54,7 +75,17 @@ class Card(BaseModel):
 
 
 class ReviewLog(BaseModel):
-    """Record of a completed review."""
+    """Records details of a single review session for a flashcard.
+
+    Attributes:
+        id: Unique identifier for the review log entry.
+        card_id: The ID of the card that was reviewed.
+        review_time: The timestamp when the review was completed.
+        rating: The user's rating of their recall (1-4).
+        interval: The calculated interval until the next review.
+        stability: The card's stability parameter after this review.
+        difficulty: The card's difficulty parameter after this review.
+    """
 
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
@@ -71,10 +102,19 @@ class ReviewLog(BaseModel):
 
 
 class FSRSScheduler:
-    """FSRS-based scheduler for spaced repetition."""
+    """Manages the spaced repetition scheduling using the FSRS algorithm.
+
+    This class handles the logic for updating card parameters (stability, difficulty,
+    and due date) based on user ratings and generates new sentences for review.
+    """
 
     def __init__(self, parameters: Optional[List[float]] = None):
-        """Initialize scheduler with optional custom parameters."""
+        """Initializes the FSRSScheduler.
+
+        Args:
+            parameters: Optional list of custom FSRS parameters. If None,
+                        default parameters for FSRS v4.0.0 are used.
+        """
         if parameters is None:
             # Default parameters for FSRS v4.0.0
             default_fsrs_parameters = (
@@ -111,19 +151,19 @@ class FSRSScheduler:
         vocabulary_database: "VocabularyDatabase",
         ai_service: "AIService",
     ) -> Tuple[Card, ReviewLog]:
-        """
-        Process a card review and return updated card and review log.
+        """Processes a card review, updates its FSRS parameters, and generates a new sentence.
 
         Args:
-            card: Current card state
-            rating: User's rating of recall
-            now: Current timestamp
-            ai_api_key: API key for AI service
-            vocabulary_database: Database containing learned vocabulary
-            ai_service: AI service for generating new sentences
+            card: The current state of the card being reviewed.
+            rating: The user's recall rating (1-4).
+            now: The current timestamp of the review.
+            ai_api_key: API key for the AI service.
+            vocabulary_database: The database instance to retrieve learned vocabulary.
+            ai_service: The AI service instance for sentence generation.
 
         Returns:
-            Tuple of (updated_card, review_log)
+            A tuple containing the updated Card object and a ReviewLog entry
+            for the current review.
         """
         # Convert rating to int if it's an enum
         rating_int = rating.value if isinstance(rating, Rating) else rating
@@ -197,7 +237,21 @@ class FSRSScheduler:
         ai_service: "AIService",
         api_key: str,
     ) -> str:
-        """Generate a new sentence using AI or fallback to original."""
+        """Generates a new sentence variation using an AI service.
+
+        If the learned vocabulary is insufficient or an error occurs during AI generation,
+        the original sentence is returned as a fallback.
+
+        Args:
+            word: The word for which to generate a new sentence.
+            original_sentence: The original sentence associated with the word.
+            vocabulary_database: The database instance to retrieve learned vocabulary.
+            ai_service: The AI service instance to use for generation.
+            api_key: The API key for the AI service.
+
+        Returns:
+            A new AI-generated sentence, or the original sentence if generation fails.
+        """
         try:
             # Get learned vocabulary
             learned_words = vocabulary_database.get_learned_vocabulary()

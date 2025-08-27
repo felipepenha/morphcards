@@ -10,16 +10,27 @@ from .core import Card, ReviewLog
 
 
 class VocabularyDatabase:
-    """In-memory database for storing learned vocabulary and cards."""
+    """Manages the in-memory DuckDB database for storing vocabulary, cards, and review logs.
+
+    This class provides methods for creating tables, adding/updating cards,
+    retrieving due cards, managing review history, and fetching vocabulary statistics.
+    """
 
     def __init__(self, db_path: Optional[str] = None):
-        """Initialize database connection."""
+        """Initializes the VocabularyDatabase connection.
+
+        Args:
+            db_path: Optional path to a DuckDB file. If None, an in-memory database is used.
+        """
         self.db_path = db_path or ":memory:"
         self.connection = duckdb.connect(self.db_path)
         self._create_tables()
 
     def _create_tables(self) -> None:
-        """Create necessary database tables."""
+        """Creates the necessary tables (cards, review_logs, vocabulary) in the database.
+
+        This method is called during initialization to ensure the database schema is set up.
+        """
         # Cards table
         self.connection.execute(
             """
@@ -68,7 +79,13 @@ class VocabularyDatabase:
         )
 
     def add_card(self, card: Card) -> None:
-        """Add a new card to the database."""
+        """Adds a new card or updates an existing one in the 'cards' table.
+
+        Also ensures the word from the card is added to the 'vocabulary' table.
+
+        Args:
+            card: The Card object to add or update.
+        """
         self.connection.execute(
             """
             INSERT OR REPLACE INTO cards 
@@ -100,11 +117,24 @@ class VocabularyDatabase:
         )
 
     def update_card(self, card: Card) -> None:
-        """Update an existing card."""
+        """Updates an existing card in the 'cards' table.
+
+        This method internally uses `add_card` with INSERT OR REPLACE functionality.
+
+        Args:
+            card: The Card object with updated information.
+        """
         self.add_card(card)  # INSERT OR REPLACE handles updates
 
     def get_card(self, card_id: str) -> Optional[Card]:
-        """Retrieve a card by ID."""
+        """Retrieves a single card by its ID from the 'cards' table.
+
+        Args:
+            card_id: The unique identifier of the card.
+
+        Returns:
+            The Card object if found, otherwise None.
+        """
         result = self.connection.execute(
             """
             SELECT id, word, sentence, original_sentence, stability, difficulty,
@@ -130,7 +160,14 @@ class VocabularyDatabase:
         return None
 
     def get_due_cards(self, now: datetime) -> List[Card]:
-        """Get all cards due for review."""
+        """Retrieves all cards that are due for review based on the current time.
+
+        Args:
+            now: The current datetime to compare against card due dates.
+
+        Returns:
+            A list of Card objects that are due.
+        """
         results = self.connection.execute(
             """
             SELECT id, word, sentence, original_sentence, stability, difficulty,
@@ -159,7 +196,14 @@ class VocabularyDatabase:
         return cards
 
     def add_review_log(self, review_log: ReviewLog) -> None:
-        """Add a review log entry."""
+        """Adds a new review log entry to the 'review_logs' table.
+
+        Also updates the 'vocabulary' table with the latest review time and increments
+        the review count for the associated word.
+
+        Args:
+            review_log: The ReviewLog object to add.
+        """
         self.connection.execute(
             """
             INSERT INTO review_logs 
@@ -188,7 +232,14 @@ class VocabularyDatabase:
         )
 
     def get_review_history(self, card_id: Optional[str] = None) -> List[ReviewLog]:
-        """Get review history, optionally filtered by card ID."""
+        """Retrieves the review history from the 'review_logs' table.
+
+        Args:
+            card_id: Optional. If provided, filters the review history for a specific card.
+
+        Returns:
+            A list of ReviewLog objects, sorted by review time in descending order.
+        """
         if card_id:
             results = self.connection.execute(
                 """
@@ -222,7 +273,11 @@ class VocabularyDatabase:
         return review_logs
 
     def get_learned_vocabulary(self) -> List[str]:
-        """Get list of all learned words."""
+        """Retrieves a list of all unique words present in the vocabulary.
+
+        Returns:
+            A list of strings, where each string is a learned word.
+        """
         results = self.connection.execute(
             """
             SELECT word FROM vocabulary ORDER BY first_seen
@@ -232,7 +287,14 @@ class VocabularyDatabase:
         return [result[0] for result in results]
 
     def get_vocabulary_stats(self) -> Dict[str, Any]:
-        """Get vocabulary statistics."""
+        """Retrieves various statistics about the vocabulary and reviews.
+
+        Returns:
+            A dictionary containing:
+            - "total_words": Total number of unique words learned.
+            - "total_cards": Total number of cards in the database.
+            - "total_reviews": Total number of review log entries.
+        """
         total_words = self.connection.execute(
             """
             SELECT COUNT(*) FROM vocabulary
@@ -258,13 +320,24 @@ class VocabularyDatabase:
         }
 
     def close(self) -> None:
-        """Close database connection."""
+        """Closes the database connection.
+        """
         self.connection.close()
 
     def __enter__(self) -> "VocabularyDatabase":
-        """Context manager entry."""
+        """Enables the use of VocabularyDatabase as a context manager.
+
+        Returns:
+            The VocabularyDatabase instance itself.
+        """
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Context manager exit."""
+        """Handles the exit of the context manager, ensuring the database connection is closed.
+
+        Args:
+            exc_type: The type of the exception that caused the context to be exited.
+            exc_val: The exception instance.
+            exc_tb: A traceback object encapsulating the call stack at the point where the exception originally occurred.
+        """
         self.close()

@@ -21,7 +21,17 @@ class AIService(ABC):
         api_key: str,
         language: str = "English",
     ) -> str:
-        """Generate a new sentence variation for the given word."""
+        """Generates a new sentence variation for the given word.
+
+        Args:
+            word: The word for which to generate a sentence.
+            learned_vocabulary: A list of words considered learned by the user.
+            api_key: The API key for the AI service.
+            language: The language of the sentence (default: "English").
+
+        Returns:
+            A new sentence containing the word, adhering to the learned vocabulary.
+        """
         pass
 
 
@@ -29,7 +39,11 @@ class OpenAIService(AIService):
     """OpenAI API service for generating sentence variations."""
 
     def __init__(self, model: str = "gpt-3.5-turbo"):
-        """Initialize OpenAI service."""
+        """Initializes the OpenAIService.
+
+        Args:
+            model: The OpenAI model to use for sentence generation (default: "gpt-3.5-turbo").
+        """
         self.model = model
         self.client: Optional[openai.OpenAI] = None
 
@@ -40,7 +54,18 @@ class OpenAIService(AIService):
         api_key: str,
         language: str = "English",
     ) -> str:
-        """Generate sentence variation using OpenAI."""
+        """Generates a new sentence variation using the OpenAI API.
+
+        Args:
+            word: The word for which to generate a sentence.
+            learned_vocabulary: A list of words considered learned by the user.
+            api_key: The OpenAI API key.
+            language: The language of the sentence (default: "English").
+
+        Returns:
+            A new sentence containing the word, adhering to the learned vocabulary.
+            Returns a fallback sentence if an error occurs during API call.
+        """
         try:
             # Initialize client with API key
             if not self.client:
@@ -82,7 +107,16 @@ class OpenAIService(AIService):
         learned_vocabulary: List[str],
         language: str,
     ) -> str:
-        """Create prompt for sentence generation."""
+        """Creates the prompt string for OpenAI API based on the given parameters.
+
+        Args:
+            word: The word to include in the sentence.
+            learned_vocabulary: A list of learned words to constrain sentence generation.
+            language: The target language for the sentence.
+
+        Returns:
+            The formatted prompt string.
+        """
         vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
 
         return f"""Generate a natural, grammatically correct sentence in {language} that:
@@ -94,7 +128,11 @@ class OpenAIService(AIService):
 Return only the sentence, no explanations."""
 
     def _handle_rate_limit(self, retry_after: int) -> None:
-        """Handle rate limiting by waiting."""
+        """Handles API rate limiting by pausing execution.
+
+        Args:
+            retry_after: The number of seconds to wait before retrying the request.
+        """
         time.sleep(retry_after)
 
 
@@ -102,7 +140,11 @@ class GeminiService(AIService):
     """Google Gemini API service for generating sentence variations."""
 
     def __init__(self, model: str = "gemini-pro"):
-        """Initialize Gemini service."""
+        """Initializes the GeminiService.
+
+        Args:
+            model: The Gemini model to use for sentence generation (default: "gemini-pro").
+        """
         self.model = model
         self.client: Optional[genai.GenerativeModel] = None
 
@@ -113,7 +155,18 @@ class GeminiService(AIService):
         api_key: str,
         language: str = "English",
     ) -> str:
-        """Generate sentence variation using Gemini."""
+        """Generates a new sentence variation using the Google Gemini API.
+
+        Args:
+            word: The word for which to generate a sentence.
+            learned_vocabulary: A list of words considered learned by the user.
+            api_key: The Google Gemini API key.
+            language: The language of the sentence (default: "English").
+
+        Returns:
+            A new sentence containing the word, adhering to the learned vocabulary.
+            Returns a fallback sentence if an error occurs during API call.
+        """
         try:
             # Initialize client with API key
             if not self.client:
@@ -145,7 +198,16 @@ class GeminiService(AIService):
         learned_vocabulary: List[str],
         language: str,
     ) -> str:
-        """Create prompt for sentence generation."""
+        """Creates the prompt string for OpenAI API based on the given parameters.
+
+        Args:
+            word: The word to include in the sentence.
+            learned_vocabulary: A list of learned words to constrain sentence generation.
+            language: The target language for the sentence.
+
+        Returns:
+            The formatted prompt string.
+        """
         vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
 
         return f"""Generate a natural, grammatically correct sentence in {language} that:
@@ -162,7 +224,17 @@ class AIServiceFactory:
 
     @staticmethod
     def create_service(service_type: str) -> AIService:
-        """Create AI service based on type."""
+        """Creates an instance of an AI service based on the specified type.
+
+        Args:
+            service_type: The type of AI service to create ("openai" or "gemini").
+
+        Returns:
+            An instance of a concrete AIService implementation.
+
+        Raises:
+            ValueError: If an unknown AI service type is provided.
+        """
         if service_type.lower() == "openai":
             return OpenAIService()
         elif service_type.lower() == "gemini":
@@ -172,5 +244,9 @@ class AIServiceFactory:
 
     @staticmethod
     def get_available_services() -> List[str]:
-        """Get list of available AI service types."""
+        """Returns a list of supported AI service types.
+
+        Returns:
+            A list of strings, e.g., ["openai", "gemini"].
+        """
         return ["openai", "gemini"]

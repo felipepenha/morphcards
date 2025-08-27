@@ -13,10 +13,20 @@ from .database import VocabularyDatabase
 
 
 class MorphCardsDemo:
-    """Demo interface for MorphCards."""
+    """Interactive demo interface for the MorphCards application.
+
+    This class provides methods to interact with the core functionalities
+    of MorphCards, such as adding cards, reviewing them, setting API keys,
+    retrieving statistics, and optimizing FSRS parameters. It serves as
+    the backend for the Gradio-based web interface.
+    """
 
     def __init__(self) -> None:
-        """Initialize the demo interface."""
+        """Initializes the MorphCardsDemo instance.
+
+        Sets up the database, FSRS scheduler, and attempts to load API keys
+        from environment variables for AI service integration.
+        """
         self.db = VocabularyDatabase()
         self.scheduler = FSRSScheduler()
         self.current_card: Optional[Card] = None
@@ -32,7 +42,16 @@ class MorphCardsDemo:
             self.ai_service_type = "openai"  # Default to openai if no gemini key
 
     def add_card(self, word: str, sentence: str, language: str) -> str:
-        """Add a new card."""
+        """Adds a new flashcard to the vocabulary database.
+
+        Args:
+            word: The word to be learned.
+            sentence: A sentence containing the word.
+            language: The language of the word and sentence (e.g., "English").
+
+        Returns:
+            A string message indicating success or failure.
+        """
         if not word.strip() or not sentence.strip():
             return "Please provide both word and sentence."
 
@@ -51,7 +70,12 @@ class MorphCardsDemo:
         return f"Added card for word: {word}\nSentence: {sentence}"
 
     def get_due_cards(self) -> str:
-        """Get list of due cards."""
+        """Retrieves a list of cards that are due for review.
+
+        Returns:
+            A formatted string listing the due cards, or a message indicating
+            that no cards are due.
+        """
         due_cards = self.db.get_due_cards(datetime.now(timezone.utc))
 
         if not due_cards:
@@ -64,7 +88,17 @@ class MorphCardsDemo:
         return result
 
     def start_review(self) -> Tuple[str, str, str, str, str]:
-        """Start reviewing due cards."""
+        """Initiates a review session by fetching the next due card.
+
+        Returns:
+            A tuple containing:
+            - A string indicating the word being reviewed.
+            - The sentence associated with the card.
+            - Instructions for rating.
+            - A string describing the rating scale.
+            - A prompt for user input.
+            If no cards are due, returns a tuple of empty strings and a message.
+        """
         due_cards = self.db.get_due_cards(datetime.now(timezone.utc))
 
         if not due_cards:
@@ -81,7 +115,16 @@ class MorphCardsDemo:
         )
 
     def submit_review(self, rating_input: str) -> str:
-        """Submit a review rating."""
+        """Submits the user's review rating for the current card.
+
+        Args:
+            rating_input: The user's rating as a string (1-4).
+
+        Returns:
+            A string message summarizing the review outcome, including the new
+            sentence, next review date, and updated FSRS parameters.
+            Returns an error message if no card is selected or the rating is invalid.
+        """
         if not self.current_card:
             return "No card to review. Please start a review first."
 
@@ -131,7 +174,15 @@ class MorphCardsDemo:
             return f"Error during review: {str(e)}"
 
     def set_api_key(self, api_key: str, service_type: str) -> str:
-        """Set API key and service type."""
+        """Sets the API key and AI service type for sentence generation.
+
+        Args:
+            api_key: The API key string.
+            service_type: The type of AI service ("openai" or "gemini").
+
+        Returns:
+            A string message confirming the API key status.
+        """
         self.api_key = api_key.strip()
         self.ai_service_type = service_type
 
@@ -141,7 +192,12 @@ class MorphCardsDemo:
         return f"API key set for {service_type} service."
 
     def get_stats(self) -> str:
-        """Get vocabulary statistics."""
+        """Retrieves and formats vocabulary statistics from the database.
+
+        Returns:
+            A string containing formatted statistics about learned words,
+            total cards, and total reviews.
+        """
         stats = self.db.get_vocabulary_stats()
 
         result = "=== Vocabulary Statistics ===\n"
@@ -152,7 +208,12 @@ class MorphCardsDemo:
         return result
 
     def optimize_parameters(self) -> str:
-        """Optimize FSRS parameters."""
+        """Optimizes the FSRS parameters based on the user's review history.
+
+        Returns:
+            A string message displaying the optimal FSRS parameters,
+            or an error message if insufficient review history is available.
+        """
         review_history = self.db.get_review_history()
 
         if len(review_history) < 10:
@@ -173,7 +234,11 @@ class MorphCardsDemo:
 
 
 def create_demo_interface() -> gr.Interface:
-    """Create the Gradio demo interface."""
+    """Creates and configures the Gradio web interface for MorphCards.
+
+    Returns:
+        A Gradio Interface object ready to be launched.
+    """
     demo = MorphCardsDemo()
 
     with gr.Blocks(title="MorphCards Demo", theme=gr.themes.Soft()) as interface:
@@ -284,7 +349,11 @@ def create_demo_interface() -> gr.Interface:
 
 
 def main() -> None:
-    """Run the demo interface."""
+    """Runs the MorphCards demo interface.
+
+    This function initializes the Gradio interface and launches it,
+    making the demo accessible via a web browser.
+    """
     interface = create_demo_interface()
     interface.launch(share=False, server_name="0.0.0.0", server_port=7860)
 
