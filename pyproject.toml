@@ -47,6 +47,8 @@ dev = [
     "mypy>=1.0.0",
     "isort>=5.0.0",
     "pre-commit>=3.0.0",
+    "trivy",
+    "pip-audit",
 ]
 demo = [
     "gradio>=4.0.0",
@@ -69,7 +71,7 @@ packages = ["src/morphcards"]
 [tool.black]
 line-length = 88
 target-version = ["py38"]
-include = "\.pyi?"
+include = ".\\.pyi?"
 
 [tool.mypy]
 python_version = "3.8"

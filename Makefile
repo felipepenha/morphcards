@@ -1,7 +1,7 @@
 # MorphCards Makefile
 # Assumes podman is being used (compatible with docker)
 
-.PHONY: help build run demo test clean all install-dev install-demo mypy format
+.PHONY: help build run demo test clean all install-dev install-demo mypy format audit
 
 # Default target
 help:
@@ -19,6 +19,8 @@ help:
 	@echo "  make install-demo - Install demo dependencies"
 	@echo "  make all        - Build, run demo, and show status"
 	@echo "  make format     - Run black and isort formatters"
+	@echo "  make mypy       - Run mypy static type checker"
+	@echo "  make audit      - Run security scans (Trivy and pip-audit)"
 	@echo ""
 	@echo "Environment:"
 	@echo "  - Ensure .env file exists with your API key"
@@ -84,6 +86,12 @@ format:
 		-v $(PWD):/app \
 		docker.io/library/python:3.11-slim \
 		bash -c "cd /app && pip install -e .[dev] && black src/ tests/ && isort src/ tests/"
+
+# Run security scans (Trivy and pip-audit)
+audit:
+	@echo "🔍 Running security audits (Trivy and pip-audit)..."
+	podman run --rm -v $(PWD):/app aquasec/trivy fs --scanners vuln,secret,config --severity HIGH,CRITICAL /app
+	podman run --rm -v $(PWD):/app docker.io/library/python:3.11-slim bash -c "cd /app && pip install -e .[dev] && pip-audit"
 
 # Clean up containers and images
 clean:
