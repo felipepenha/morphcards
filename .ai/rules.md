@@ -6,6 +6,10 @@
 
 - Make project ready for `pypi` submission as a package, which includes a `pyproject.toml` file.
 
+- Include Google-style docstrings in every class and def of the codebase.
+
+- Include Python type-hints in every class and def of the codebase.
+
 
 ## Containerization
 
