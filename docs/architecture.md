@@ -100,8 +100,8 @@ erDiagram
         string word
         string sentence
         string original_sentence
-        float stability
-        float difficulty
+        float stability (nullable)
+        float difficulty (nullable)
         datetime due_date
         datetime created_at
         datetime last_reviewed
@@ -109,13 +109,13 @@ erDiagram
     }
     
     REVIEW_LOGS {
-        int id PK
+        string id PK
         string card_id FK
         datetime review_time
         int rating
         float interval
-        float stability
-        float difficulty
+        float stability (nullable)
+        float difficulty (nullable)
     }
     
     VOCABULARY {

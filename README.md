@@ -296,19 +296,21 @@ The demo provides:
 - `word`: Word to learn
 - `sentence`: Current sentence
 - `original_sentence`: Original sentence when created
-- `stability`: FSRS stability parameter
-- `difficulty`: FSRS difficulty parameter
+- `stability`: FSRS stability parameter (nullable)
+- `difficulty`: FSRS difficulty parameter (nullable)
 - `due_date`: Next review date
+- `state`: FSRS state (New, Learning, Review, Relearning)
 
 #### `Scheduler`
 - `review_card()`: Process card review and generate new sentence
-- `parameters`: FSRS algorithm parameters
+- `_fsrs`: Internal FSRS scheduler instance (manages parameters internally)
 
 #### `VocabularyDatabase`
 - `add_card()`: Add new card
 - `get_due_cards()`: Get cards ready for review
 - `get_learned_vocabulary()`: Get all learned words
-- `add_review_log()`: Record review completion
+- `add_review_log()`: Record review completion (now stores UUID for review logs)
+- `stability` and `difficulty` in cards table are now nullable.
 
 ## 🤝 Contributing
 
