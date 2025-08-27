@@ -47,7 +47,6 @@ dev = [
     "mypy>=1.0.0",
     "isort>=5.0.0",
     "pre-commit>=3.0.0",
-    "trivy",
     "pip-audit",
 ]
 demo = [
@@ -74,7 +73,7 @@ target-version = ["py38"]
 include = ".\\.pyi?"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

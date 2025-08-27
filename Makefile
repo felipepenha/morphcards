@@ -130,10 +130,10 @@ demo-quick:
 status:
 	@echo "📊 Container Status:"
 	@echo "Running containers:"
-	@podman ps --filter "ancestor=morphcards" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "No running containers"
+	@podman ps --filter "ancestor=morphcards" --format "table {{.Names}}	{{.Status}}	{{.Ports}}" 2>/dev/null || echo "No running containers"
 	@echo ""
 	@echo "Available images:"
-	@podman images morphcards --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null || echo "No morphcards images found"
+	@podman images morphcards --format "table {{.Repository}}	{{.Tag}}	{{.Size}}" 2>/dev/null || echo "No morphcards images found"
 
 # Check if .env file exists
 check-env:
