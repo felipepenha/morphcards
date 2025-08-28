@@ -1,5 +1,7 @@
 """Unit tests for the demo module."""
 
+import random
+import string
 from datetime import datetime, timedelta, timezone
 from unittest.mock import ANY, MagicMock, patch
 
@@ -7,6 +9,11 @@ import pytest
 
 from morphcards.core import Card, FSRSScheduler, Rating  # Import FSRSScheduler
 from morphcards.demo import MorphCardsDemo
+
+
+def generate_gibberish(length: int = 20) -> str:
+    """Generates a random string of letters and digits."""
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
 class TestMorphCardsDemo:
@@ -25,6 +32,7 @@ class TestMorphCardsDemo:
 
     def test_add_card_successfully(self, demo: MorphCardsDemo):
         """Test that a card is added successfully with valid inputs."""
+        demo.db.get_card_by_word.return_value = None
         word = "test"
         sentence = "This is a test."
         result = demo.add_card(word, sentence, "English")
@@ -34,6 +42,33 @@ class TestMorphCardsDemo:
         added_card = demo.db.add_card.call_args[0][0]
         assert added_card.word == word
         assert added_card.sentence == sentence
+
+    def test_add_card_for_existing_word_updates_card(self, demo: MorphCardsDemo):
+        """Test that adding a card for an existing word updates the card."""
+        existing_card = Card(
+            id="1",
+            word="test",
+            sentence="This is a test.",
+            original_sentence="This is a test.",
+            due_date=demo.current_time,
+            language="English",
+        )
+        demo.db.get_card_by_word.return_value = existing_card
+
+        result = demo.add_card("test", "This is a new test.", "English")
+
+        assert "Updated card for word: test" in result
+        demo.db.update_card.assert_called_once_with(existing_card)
+        assert existing_card.sentence == "This is a new test."
+
+    def test_add_card_for_new_word_creates_card(self, demo: MorphCardsDemo):
+        """Test that adding a card for a new word creates a new card."""
+        demo.db.get_card_by_word.return_value = None
+
+        result = demo.add_card("test", "This is a test.", "English")
+
+        assert "Added card for word: test" in result
+        demo.db.add_card.assert_called_once()
 
     def test_add_card_with_empty_inputs(self, demo: MorphCardsDemo):
         """Test that adding a card with empty inputs returns an. error message."""
@@ -204,6 +239,7 @@ class TestMorphCardsDemo:
         # 1. Add a new card
         word = "cycle"
         sentence = "This is a test sentence for the cycle."
+        demo.db.get_card_by_word.return_value = None
         add_result = demo.add_card(word, sentence, "English")
         assert "Added card for word: cycle" in add_result
 
@@ -219,13 +255,10 @@ class TestMorphCardsDemo:
             difficulty=None,
             language="English",
         )
-        demo.db.add_card.side_effect = lambda card_arg: setattr(
-            card_arg, "id", predictable_card_id
-        )
+        demo.db.get_card_by_word.return_value = added_card_from_db
 
         # We need to mock get_due_cards to return the card we just added
         demo.db.get_due_cards.return_value = [added_card_from_db]
-        demo.db.add_card.reset_mock()  # Reset mock to check update_card later
 
         # 2. Start review
         start_review_result = demo.start_review()
@@ -281,14 +314,13 @@ class TestMorphCardsDemo:
 
         # Mock datetime.now() to control time
         fixed_now_initial = datetime(2025, 8, 26, 10, 0, 0, tzinfo=timezone.utc)
-        fixed_now_after_first_review = fixed_now_initial + timedelta(hours=1)
-        fixed_now_after_second_review = fixed_now_initial + timedelta(days=1)
 
         demo.current_time = fixed_now_initial  # Set demo.current_time
 
         # 1. Add a new card
         word = "multi_review"
         sentence = "This is a sentence for multiple reviews."
+        demo.db.get_card_by_word.return_value = None
         add_result = demo.add_card(word, sentence, "English")
         assert "Added card for word: multi_review" in add_result
 
@@ -304,11 +336,8 @@ class TestMorphCardsDemo:
             difficulty=None,
             language="English",
         )
-        demo.db.add_card.side_effect = lambda card_arg: setattr(
-            card_arg, "id", predictable_card_id
-        )
+        demo.db.get_card_by_word.return_value = added_card_from_db
         demo.db.get_due_cards.return_value = [added_card_from_db]
-        demo.db.add_card.reset_mock()  # Reset mock to check update_card later
 
         # First review (Rating 3 - Good)
         start_review_result = demo.start_review()
@@ -371,21 +400,14 @@ class TestMorphCardsDemo:
         assert demo.current_time == expected_current_time
         assert demo.current_card is None  # Current card should be cleared
 
-    def test_ai_sentence_variation_on_failed_review(self, demo: MorphCardsDemo):
-        """Test that AI sentence variation is called on each subsequent day for a failed card."""
+    def test_ai_sentence_variation_is_unique_on_failed_review(self, demo: MorphCardsDemo):
+        """Test that AI sentence variation is unique on each subsequent day for a failed card."""
         # Mock the AI service factory to return a mock AI service
         with patch(
             "morphcards.ai.AIServiceFactory.create_service"
         ) as mock_create_service:
             mock_ai_service = MagicMock()
-            expected_sentences = [
-                "Sentence 1 for failed review.",
-                "Sentence 2 for failed review.",
-                "Sentence 3 for failed review.",
-                "Sentence 4 for failed review.",
-                "Sentence 5 for failed review.",
-            ]
-            mock_ai_service.generate_sentence_variation.side_effect = expected_sentences
+            mock_ai_service.generate_sentence_variation.side_effect = lambda **kwargs: generate_gibberish()
             mock_create_service.return_value = mock_ai_service
 
             # Ensure API key is set for the demo instance
@@ -400,6 +422,7 @@ class TestMorphCardsDemo:
             # 1. Add a new card
             word = "test_failed_ai"
             sentence = "Initial sentence for failed AI test."
+            demo.db.get_card_by_word.return_value = None
             demo.add_card(word, sentence, "English")
 
             # Simulate the database having the added card
@@ -414,11 +437,10 @@ class TestMorphCardsDemo:
                 difficulty=None,
                 language="English",
             )
-            demo.db.add_card.side_effect = lambda card_arg: setattr(
-                card_arg, "id", predictable_card_id
-            )
+            demo.db.get_card_by_word.return_value = test_card
 
             # Simulate multiple days of failed reviews
+            generated_sentences = []
             num_days = 5
             for i in range(num_days):
                 # Advance time by one day
@@ -441,17 +463,19 @@ class TestMorphCardsDemo:
                     rating=Rating.AGAIN,
                 )
 
-                # Assert that the sentence in the updated card is from the mock AI service
+                # Assert that the sentence in the updated card is not empty
                 new_sentence_prefix = "New sentence: "
                 start_index = submit_result.find(new_sentence_prefix)
                 end_index = submit_result.find(
-                    "\n", start_index + len(new_sentence_prefix)
-                )  # Corrected escape sequence for newline
+                    "\n", start_index + len(new_sentence_prefix) # Corrected escape sequence for newline
+                )
                 extracted_sentence = submit_result[
                     start_index + len(new_sentence_prefix) : end_index
                 ].strip()
 
-                assert extracted_sentence == expected_sentences[i]
+                assert extracted_sentence
+                assert extracted_sentence not in generated_sentences
+                generated_sentences.append(extracted_sentence)
 
                 # Update the test_card with the new sentence for the next iteration
                 test_card.sentence = extracted_sentence

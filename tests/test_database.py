@@ -33,6 +33,25 @@ class TestVocabularyDatabase:
         finally:
             db.close()
 
+    def test_get_card_by_word(self) -> None:
+        db = VocabularyDatabase()
+        try:
+            card = Card(
+                id="test_1",
+                word="hello",
+                sentence="Hello world!",
+                original_sentence="Hello world!",
+                due_date=datetime.now(),
+                language="English",
+            )
+            db.add_card(card)
+
+            retrieved_card = db.get_card_by_word("hello")
+            assert retrieved_card is not None
+            assert retrieved_card.word == "hello"
+        finally:
+            db.close()
+
     def test_get_learned_vocabulary(self) -> None:
         db = VocabularyDatabase()
         try:

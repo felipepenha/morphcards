@@ -124,6 +124,32 @@ class VocabularyDatabase:
             )
         return None
 
+    def get_card_by_word(self, word: str) -> Optional[Card]:
+        result = self.connection.execute(
+            """
+            SELECT id, word, sentence, original_sentence, stability, difficulty,
+                   due_date, created_at, last_reviewed, review_count, language
+            FROM cards WHERE word = ?
+        """,
+            (word,),
+        ).fetchone()
+
+        if result:
+            return Card(
+                id=result[0],
+                word=result[1],
+                sentence=result[2],
+                original_sentence=result[3],
+                stability=result[4],
+                difficulty=result[5],
+                due_date=result[6],
+                created_at=result[7],
+                last_reviewed=result[8],
+                review_count=result[9],
+                language=result[10],
+            )
+        return None
+
     def get_due_cards(self, now: datetime) -> List[Card]:
         results = self.connection.execute(
             """

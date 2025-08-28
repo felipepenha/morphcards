@@ -48,6 +48,9 @@ class MorphCardsDemo:
     def add_card(self, word: str, sentence: str, language: str) -> str:
         """Adds a new flashcard to the vocabulary database.
 
+        If a card for the word already exists, it updates the sentence.
+        Otherwise, it creates a new card.
+
         Args:
             word: The word to be learned.
             sentence: A sentence containing the word.
@@ -59,20 +62,26 @@ class MorphCardsDemo:
         if not word.strip() or not sentence.strip():
             return "Please provide both word and sentence."
 
-        card = Card(
-            id=f"{word}_{self.current_time.timestamp()}",  # Use current_time
-            word=word.strip(),
-            sentence=sentence.strip(),
-            original_sentence=sentence.strip(),
-            stability=None,
-            difficulty=None,
-            due_date=self.current_time,  # Use current_time
-            created_at=self.current_time,  # Use current_time
-            language=language,  # Pass the language here
-        )
+        existing_card = self.db.get_card_by_word(word.strip())
 
-        self.db.add_card(card)
-        return f"Added card for word: {word}\nSentence: {sentence}"
+        if existing_card:
+            existing_card.sentence = sentence.strip()
+            self.db.update_card(existing_card)
+            return f"Updated card for word: {word}\nSentence: {sentence}"
+        else:
+            card = Card(
+                id=f"{word}_{self.current_time.timestamp()}",  # Use current_time
+                word=word.strip(),
+                sentence=sentence.strip(),
+                original_sentence=sentence.strip(),
+                stability=None,
+                difficulty=None,
+                due_date=self.current_time,  # Use current_time
+                created_at=self.current_time,  # Use current_time
+                language=language,  # Pass the language here
+            )
+            self.db.add_card(card)
+            return f"Added card for word: {word}\nSentence: {sentence}"
 
     def get_due_cards(self) -> str:
         """Retrieves a list of cards that are due for review.
@@ -370,7 +379,7 @@ def create_demo_interface() -> gr.Interface:
             )
             submit_btn = gr.Button("Submit Rating", variant="primary")
             skip_btn = gr.Button(
-                "Move Forward By 1 Day", variant="secondary"
+                "Move Forward By 1 Day", variant="secondary" 
             )  # Renamed button
 
             review_output = gr.Textbox(label="Review Result", interactive=False)
@@ -406,7 +415,7 @@ def create_demo_interface() -> gr.Interface:
             )
 
             skip_btn.click(
-                demo.skip_to_next_day, outputs=[review_output, current_date_display]
+                demo.skip_to_next_day, outputs=[review_output, current_date_display] 
             )  # Update current_date_display
 
         with gr.Tab("Statistics"):
