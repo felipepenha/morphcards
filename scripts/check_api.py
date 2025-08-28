@@ -13,18 +13,23 @@ try:
 except ImportError:
     genai = None
 
-from morphcards.ai import _get_openai_client, _get_gemini_client
+from morphcards.ai import AIServiceFactory
 
 def check_openai_connectivity(api_key: str) -> bool:
     if not openai:
         print("OpenAI library not installed. Skipping OpenAI connectivity check.")
         return False
     try:
-        client = _get_openai_client(api_key)
-        # Attempt to list models as a simple connectivity test
-        client.models.list()
-        print("✅ OpenAI API connection successful!")
-        return True
+        ai_service = AIServiceFactory.create_service("openai")
+        dummy_sentence = ai_service.generate_sentence_variation(
+            word="test", learned_vocabulary=["hello", "world"], api_key=api_key, language="English"
+        )
+        if dummy_sentence and not dummy_sentence.startswith("I am learning the word"):
+            print(f"✅ OpenAI API connection successful! Generated: {dummy_sentence}")
+            return True
+        else:
+            print(f"❌ OpenAI API connection failed: {dummy_sentence}")
+            return False
     except Exception as e:
         print(f"❌ OpenAI API connection failed: {e}")
         return False
@@ -34,10 +39,16 @@ def check_gemini_connectivity(api_key: str) -> bool:
         print("Google Generative AI library not installed. Skipping Gemini connectivity check.")
         return False
     try:
-        # For Gemini, we can list models directly from genai
-        list(genai.list_models())
-        print("✅ Gemini API connection successful!")
-        return True
+        ai_service = AIServiceFactory.create_service("gemini")
+        dummy_sentence = ai_service.generate_sentence_variation(
+            word="test", learned_vocabulary=["hello", "world"], api_key=api_key, language="English"
+        )
+        if dummy_sentence and not dummy_sentence.startswith("I am learning the word"):
+            print(f"✅ Gemini API connection successful! Generated: {dummy_sentence}")
+            return True
+        else:
+            print(f"❌ Gemini API connection failed: {dummy_sentence}")
+            return False
     except Exception as e:
         print(f"❌ Gemini API connection failed: {e}")
         return False
