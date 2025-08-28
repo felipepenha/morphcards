@@ -70,7 +70,9 @@ class Card(BaseModel):
     )
     review_count: int = Field(default=0, description="Number of times reviewed")
     state: State = Field(default=State.Learning, description="FSRS state")
-    language: str = Field(..., description="Language of the card") # Added language field
+    language: str = Field(
+        ..., description="Language of the card"
+    )  # Added language field
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -116,6 +118,8 @@ class FSRSScheduler:
             parameters: Optional list of custom FSRS parameters. If None,
                         default parameters for FSRS v4.0.0 are used.
         """
+        self._fsrs: Scheduler # Declare the attribute with its type hint
+
         if parameters is None:
             # Default parameters for FSRS v4.0.0
             default_fsrs_parameters = (
@@ -139,9 +143,9 @@ class FSRSScheduler:
                 0.5034,
                 0.6567,
             )
-            self._fsrs: Scheduler = Scheduler(parameters=default_fsrs_parameters)
+            self._fsrs = Scheduler(parameters=default_fsrs_parameters)
         else:
-            self._fsrs: Scheduler = Scheduler(parameters=parameters)
+            self._fsrs = Scheduler(parameters=parameters)
 
     def review_card(
         self,
@@ -151,7 +155,7 @@ class FSRSScheduler:
         ai_api_key: str,
         vocabulary_database: "VocabularyDatabase",
         ai_service: "AIService",
-        language: str, # Added language parameter
+        language: str,  # Added language parameter
     ) -> Tuple[Card, ReviewLog]:
         """Processes a card review, updates its FSRS parameters, and generates a new sentence.
 
@@ -199,7 +203,7 @@ class FSRSScheduler:
             ai_service,
             ai_api_key,
             Rating(rating_int),
-            language, # Pass the language here
+            language,  # Pass the language here
         )
 
         # Update card with new sentence and FSRS parameters
@@ -243,7 +247,7 @@ class FSRSScheduler:
         ai_service: "AIService",
         api_key: str,
         rating: Rating,
-        language: str, # Added language parameter
+        language: str,  # Added language parameter
     ) -> str:
         """Generates a new sentence variation using an AI service.
 
@@ -275,7 +279,7 @@ class FSRSScheduler:
                 word=word,
                 learned_vocabulary=learned_words,
                 api_key=api_key,
-                language=language, # Pass the language parameter
+                language=language,  # Pass the language parameter
                 rating=rating,
             )
 
