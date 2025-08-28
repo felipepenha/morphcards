@@ -179,7 +179,7 @@ class FSRSScheduler:
         fsrs_card = FSRS_Card(
             card_id=hash(card.id),
             state=card.state,
-            step=card.review_count,
+            step=card.review_count if card.state in [State.Learning, State.Relearning] else None,
             stability=card.stability,
             difficulty=card.difficulty,
             due=card.due_date.replace(tzinfo=timezone.utc),
