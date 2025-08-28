@@ -156,7 +156,7 @@ class VocabularyDatabase:
     def add_review_log(self, review_log: ReviewLog) -> None:
         self.connection.execute(
             """
-            INSERT INTO review_logs 
+            INSERT INTO review_logs
             (id, card_id, review_time, rating, interval, stability, difficulty)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
@@ -171,13 +171,16 @@ class VocabularyDatabase:
             ),
         )
 
+        # Determine mastery level based on stability
+        mastery_level = 1 if review_log.stability >= 10 else 0
+
         self.connection.execute(
             """
-            UPDATE vocabulary 
-            SET last_reviewed = ?, review_count = review_count + 1
+            UPDATE vocabulary
+            SET last_reviewed = ?, review_count = review_count + 1, mastery_level = ?
             WHERE word = (SELECT word FROM cards WHERE id = ?)
         """,
-            (review_log.review_time, review_log.card_id),
+            (review_log.review_time, mastery_level, review_log.card_id),
         )
 
     def get_review_history(self, card_id: Optional[str] = None) -> List[ReviewLog]:
@@ -216,7 +219,7 @@ class VocabularyDatabase:
     def get_learned_vocabulary(self) -> List[str]:
         results = self.connection.execute(
             """
-            SELECT word FROM vocabulary ORDER BY first_seen
+            SELECT word FROM vocabulary WHERE mastery_level = 1 ORDER BY first_seen
         """
         ).fetchall()
 

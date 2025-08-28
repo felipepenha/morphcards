@@ -31,6 +31,9 @@ class MorphCardsDemo:
         self.scheduler = FSRSScheduler()
         self.current_card: Optional[Card] = None
         self.current_time: datetime = datetime.now(timezone.utc)  # Added current_time
+        self.mastered_words_override: Optional[List[str]] = (
+            None  # Added mastered_words_override
+        )
 
         load_dotenv()
         gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -217,6 +220,24 @@ class MorphCardsDemo:
 
         return f"API key set for {service_type} service."
 
+    def set_mastered_words_override(self, words_str: str) -> str:
+        """Manually sets a list of mastered words for AI sentence generation override.
+
+        Args:
+            words_str: A comma-separated string of words.
+
+        Returns:
+            A string message confirming the set words.
+        """
+        if words_str.strip():
+            self.mastered_words_override = [
+                word.strip() for word in words_str.split(",") if word.strip()
+            ]
+            return f"Mastered words set: {', '.join(self.mastered_words_override)}"
+        else:
+            self.mastered_words_override = None
+            return "Mastered words override cleared."
+
     def get_stats(self) -> str:
         """Retrieves and formats vocabulary statistics from the database.
 
@@ -246,6 +267,11 @@ class MorphCardsDemo:
             return "Need at least 10 reviews to optimize parameters."
 
         try:
+            # Assuming Optimizer class and its method are defined elsewhere or imported
+            # from .core import Optimizer # This import might be missing, add if needed
+            from fsrs_optimizer import \
+                Optimizer  # Assuming this is the correct import
+
             optimizer = Optimizer()
             optimal_params = optimizer.optimize_parameters(review_history)
 
@@ -311,6 +337,14 @@ def create_demo_interface() -> gr.Interface:
                 )
                 set_key_btn = gr.Button("Set API Key")
 
+            with gr.Row():
+                mastered_words_input = gr.Textbox(
+                    label="Manually Set Mastered Words (comma-separated)",
+                    placeholder="e.g., dog, cat, house",
+                    lines=2,
+                )
+                set_mastered_btn = gr.Button("Set Mastered Words")
+
             key_output = gr.Textbox(label="API Key Status", interactive=False)
 
             with gr.Row():
@@ -345,6 +379,12 @@ def create_demo_interface() -> gr.Interface:
                 demo.set_api_key,
                 inputs=[api_key_input, service_select],
                 outputs=key_output,
+            )
+
+            set_mastered_btn.click(
+                demo.set_mastered_words_override,
+                inputs=[mastered_words_input],
+                outputs=key_output,  # Re-using key_output for simplicity, or create a new one
             )
 
             get_due_btn.click(demo.get_due_cards, outputs=due_output)

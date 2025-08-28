@@ -46,6 +46,17 @@ class TestVocabularyDatabase:
             )
             db.add_card(card)
 
+            # Simulate a review that sets mastery_level to 1
+            review_log = ReviewLog(
+                card_id=card.id,
+                review_time=datetime.now(),
+                rating=Rating.EASY,  # Rating doesn't directly affect mastery_level, stability does
+                interval=10.0,
+                stability=10.0,  # Set stability >= 10 to achieve mastery_level = 1
+                difficulty=0.5,
+            )
+            db.add_review_log(review_log)
+
             vocab = db.get_learned_vocabulary()
             assert "world" in vocab
         finally:

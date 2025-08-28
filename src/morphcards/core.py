@@ -285,6 +285,9 @@ class FSRSScheduler:
 
             return new_sentence
 
-        except Exception:
+        except Exception as e:
+            print(
+                f"DEBUG: Error generating new sentence: {e}. Falling back to original sentence."
+            )
             # Fallback to original sentence on any error
             return original_sentence
