@@ -119,7 +119,7 @@ class TestMorphCardsDemo:
             word="test",
             sentence="This is a test.",
             original_sentence="This is a test.",
-            due_date=demo.current_time, # Use demo.current_time
+            due_date=demo.current_time,  # Use demo.current_time
             stability=None,
             difficulty=None,
             language="English",
@@ -199,7 +199,7 @@ class TestMorphCardsDemo:
 
         # Mock datetime.now() to control time
         fixed_now = datetime(2025, 8, 26, 10, 0, 0, tzinfo=timezone.utc)
-        demo.current_time = fixed_now # Set demo.current_time
+        demo.current_time = fixed_now  # Set demo.current_time
 
         # 1. Add a new card
         word = "cycle"
@@ -284,7 +284,7 @@ class TestMorphCardsDemo:
         fixed_now_after_first_review = fixed_now_initial + timedelta(hours=1)
         fixed_now_after_second_review = fixed_now_initial + timedelta(days=1)
 
-        demo.current_time = fixed_now_initial # Set demo.current_time
+        demo.current_time = fixed_now_initial  # Set demo.current_time
 
         # 1. Add a new card
         word = "multi_review"
@@ -365,7 +365,7 @@ class TestMorphCardsDemo:
         skip_result = demo.skip_to_next_day()
 
         # Assertions
-        assert "Timeline advanced to next day" == skip_result[0].split('.')[0]
+        assert "Timeline advanced to next day" == skip_result[0].split(".")[0]
         # Verify that demo.current_time has advanced by one day
         expected_current_time = datetime(2025, 8, 28, 11, 0, 0, tzinfo=timezone.utc)
         assert demo.current_time == expected_current_time
@@ -374,7 +374,9 @@ class TestMorphCardsDemo:
     def test_ai_sentence_variation_on_failed_review(self, demo: MorphCardsDemo):
         """Test that AI sentence variation is called on each subsequent day for a failed card."""
         # Mock the AI service factory to return a mock AI service
-        with patch("morphcards.ai.AIServiceFactory.create_service") as mock_create_service:
+        with patch(
+            "morphcards.ai.AIServiceFactory.create_service"
+        ) as mock_create_service:
             mock_ai_service = MagicMock()
             expected_sentences = [
                 "Sentence 1 for failed review.",
@@ -433,7 +435,7 @@ class TestMorphCardsDemo:
                 # Assert that AI service was called for sentence variation
                 mock_ai_service.generate_sentence_variation.assert_called_once_with(
                     word=word,
-                    learned_vocabulary=ANY, # We don't care about the exact vocabulary list here
+                    learned_vocabulary=ANY,  # We don't care about the exact vocabulary list here
                     api_key="test_api_key",
                     language="English",
                     rating=Rating.AGAIN,
@@ -442,8 +444,12 @@ class TestMorphCardsDemo:
                 # Assert that the sentence in the updated card is from the mock AI service
                 new_sentence_prefix = "New sentence: "
                 start_index = submit_result.find(new_sentence_prefix)
-                end_index = submit_result.find("\n", start_index + len(new_sentence_prefix)) # Corrected escape sequence for newline
-                extracted_sentence = submit_result[start_index + len(new_sentence_prefix):end_index].strip()
+                end_index = submit_result.find(
+                    "\n", start_index + len(new_sentence_prefix)
+                )  # Corrected escape sequence for newline
+                extracted_sentence = submit_result[
+                    start_index + len(new_sentence_prefix) : end_index
+                ].strip()
 
                 assert extracted_sentence == expected_sentences[i]
 
@@ -454,6 +460,8 @@ class TestMorphCardsDemo:
                 mock_ai_service.generate_sentence_variation.reset_mock()
 
             # After the loop, ensure the AI service was called for each day
-            assert mock_ai_service.generate_sentence_variation.call_count == 0 # Should be 0 because we reset it in each iteration
+            assert (
+                mock_ai_service.generate_sentence_variation.call_count == 0
+            )  # Should be 0 because we reset it in each iteration
 
-        patch.stopall() # Clean up all patches
+        patch.stopall()  # Clean up all patches

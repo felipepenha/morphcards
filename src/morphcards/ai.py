@@ -9,7 +9,7 @@ import google.generativeai as genai
 import openai
 import requests
 
-from morphcards.core import Rating # Import Rating
+from morphcards.core import Rating  # Import Rating
 
 
 class AIService(ABC):
@@ -22,7 +22,7 @@ class AIService(ABC):
         learned_vocabulary: List[str],
         api_key: str,
         language: str = "English",
-        rating: Optional[Rating] = None, # Added rating parameter
+        rating: Optional[Rating] = None,  # Added rating parameter
     ) -> str:
         """Generates a new sentence variation for the given word.
 
@@ -57,7 +57,7 @@ class OpenAIService(AIService):
         learned_vocabulary: List[str],
         api_key: str,
         language: str = "English",
-        rating: Optional[Rating] = None, # Added rating parameter
+        rating: Optional[Rating] = None,  # Added rating parameter
     ) -> str:
         """Generates a new sentence variation using the OpenAI API.
 
@@ -78,7 +78,9 @@ class OpenAIService(AIService):
                 self.client = openai.OpenAI(api_key=api_key)
 
             # Create prompt for sentence generation
-            prompt = self._create_prompt(word, learned_vocabulary, language, rating) # Pass rating
+            prompt = self._create_prompt(
+                word, learned_vocabulary, language, rating
+            )  # Pass rating
 
             # Generate response
             response = self.client.chat.completions.create(
@@ -112,7 +114,7 @@ class OpenAIService(AIService):
         word: str,
         learned_vocabulary: List[str],
         language: str,
-        rating: Optional[Rating] = None, # Added rating parameter
+        rating: Optional[Rating] = None,  # Added rating parameter
     ) -> str:
         """Creates the prompt string for OpenAI API based on the given parameters.
 
@@ -128,7 +130,7 @@ class OpenAIService(AIService):
         vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
 
         additional_instruction = ""
-        if rating == Rating.AGAIN: # If rating is 'Again' (1)
+        if rating == Rating.AGAIN:  # If rating is 'Again' (1)
             additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
 
         return f"""Generate a natural, grammatically correct sentence in {language} that:
@@ -166,7 +168,7 @@ class GeminiService(AIService):
         learned_vocabulary: List[str],
         api_key: str,
         language: str = "English",
-        rating: Optional[Rating] = None, # Added rating parameter
+        rating: Optional[Rating] = None,  # Added rating parameter
     ) -> str:
         """Generates a new sentence variation using the Google Gemini API.
 
@@ -188,10 +190,14 @@ class GeminiService(AIService):
                 self.client = genai.GenerativeModel(self.model)
 
             # Create prompt for sentence generation
-            prompt = self._create_prompt(word, learned_vocabulary, language, rating) # Pass rating
+            prompt = self._create_prompt(
+                word, learned_vocabulary, language, rating
+            )  # Pass rating
 
             # Generate response
-            response = self.client.generate_content(prompt, generation_config={"temperature": 0.9})
+            response = self.client.generate_content(
+                prompt, generation_config={"temperature": 0.9}
+            )
 
             # Extract and clean response
             sentence = response.text.strip()
@@ -211,7 +217,7 @@ class GeminiService(AIService):
         word: str,
         learned_vocabulary: List[str],
         language: str,
-        rating: Optional[Rating] = None, # Added rating parameter
+        rating: Optional[Rating] = None,  # Added rating parameter
     ) -> str:
         """Creates the prompt string for OpenAI API based on the given parameters.
 
@@ -227,7 +233,7 @@ class GeminiService(AIService):
         vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
 
         additional_instruction = ""
-        if rating == Rating.AGAIN: # If rating is 'Again' (1)
+        if rating == Rating.AGAIN:  # If rating is 'Again' (1)
             additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
 
         return f"""Generate a natural, grammatically correct sentence in {language} that:
