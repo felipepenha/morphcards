@@ -139,12 +139,13 @@ class OpenAIService(AIService):
         models_to_try = []
         for preferred_family in preferred_model_families:
             # Find the latest version of the preferred family
-            matching_models = sorted([
-                m for m in available_models if m.startswith(preferred_family)
-            ], reverse=True) # Sort to get latest version first
+            matching_models = sorted(
+                [m for m in available_models if m.startswith(preferred_family)],
+                reverse=True,
+            )  # Sort to get latest version first
             if matching_models:
                 models_to_try.append(matching_models[0])
-        
+
         # Add any other available models that support chat completion, not in preferred_models
         for model_name in available_models:
             if model_name not in models_to_try:
@@ -233,7 +234,11 @@ class GeminiService(AIService):
 
         # Define a preferred order of models (most capable to least capable/cheapest)
         # These are common and generally available models.
-        preferred_model_families = ["models/gemini-2.5-flash-lite", "models/gemini-1.5-flash-lite", "models/gemini-1.5-pro"]
+        preferred_model_families = [
+            "models/gemini-2.5-flash-lite",
+            "models/gemini-1.5-flash-lite",
+            "models/gemini-1.5-pro",
+        ]
 
         # Get all available models and filter for text generation capabilities
         available_models = []
@@ -245,13 +250,12 @@ class GeminiService(AIService):
         models_to_try = []
         for preferred_family in preferred_model_families:
             # Find the latest version of the preferred family
-            matching_models = sorted([
-                m for m in available_models if m.startswith(preferred_family)
-            ], reverse=True) # Sort to get latest version first
+            matching_models = sorted(
+                [m for m in available_models if m.startswith(preferred_family)],
+                reverse=True,
+            )  # Sort to get latest version first
             if matching_models:
                 models_to_try.append(matching_models[0])
-        
-        
 
         if not models_to_try:
             print("No suitable Gemini models found that support content generation.")
@@ -295,7 +299,7 @@ class AIServiceFactory:
 
         Args:
             service_type: The type of AI service to create ("openai" or "gemini").
-        
+
         Returns:
             An instance of a concrete AIService implementation.
 
