@@ -118,7 +118,7 @@ class FSRSScheduler:
             parameters: Optional list of custom FSRS parameters. If None,
                         default parameters for FSRS v4.0.0 are used.
         """
-        self._fsrs: Scheduler # Declare the attribute with its type hint
+        self._fsrs: Scheduler  # Declare the attribute with its type hint
 
         if parameters is None:
             # Default parameters for FSRS v4.0.0
