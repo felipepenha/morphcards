@@ -3,7 +3,7 @@
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import google.generativeai as genai
 import openai
@@ -34,14 +34,23 @@ def _create_prompt(
     vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
 
     return f"""Generate a natural, grammatically correct sentence in {language} that:
-1. Contains the word '{word}' in a meaningful context
-2. Uses vocabulary from this list, as much as possible: {vocab_text}
-3. When vocabulary is too short, used vocabulary based on language level inference
-3. Sounds natural to a native speaker
-4. Is appropriate for language learning
-5. The sentence is short, from 2 to 10 words max
+* Contains the word '{word}' in a meaningful context
+* Uses vocabulary from this list, as much as possible: {vocab_text}
+* When vocabulary is too short, used vocabulary based on language level inference
+* Sounds natural to a native speaker
+* Is appropriate for language learning
+* The sentence is short, from 2 to 10 words max
 {additional_instruction}
 Return only the sentence, no explanations."""
+
+
+def _get_openai_client(api_key: str) -> openai.OpenAI:
+    return openai.OpenAI(api_key=api_key)
+
+
+def _get_gemini_client(api_key: str) -> genai.GenerativeModel:
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel("gemini-pro")
 
 
 class AIService(ABC):
@@ -106,12 +115,14 @@ class OpenAIService(AIService):
         """
         try:
             # Initialize client with API key
-            if not self.client:
-                self.client = openai.OpenAI(api_key=api_key)
+            self.client = _get_openai_client(api_key)
 
             # Create prompt for sentence generation
+            additional_instruction = ""
+            if rating == Rating.AGAIN:
+                additional_instruction = "* Generate a sentence that is significantly different from previous sentences for this word.\n"
             prompt = _create_prompt(
-                word, learned_vocabulary, language, rating
+                word, learned_vocabulary, language, rating, additional_instruction
             )  # Pass rating
 
             # Generate response
@@ -185,13 +196,14 @@ class GeminiService(AIService):
         """
         try:
             # Initialize client with API key
-            if not self.client:
-                genai.configure(api_key=api_key)
-                self.client = genai.GenerativeModel(self.model)
+            self.client = _get_gemini_client(api_key)
 
             # Create prompt for sentence generation
+            additional_instruction = ""
+            if rating == Rating.AGAIN:
+                additional_instruction = "* Generate a sentence that is significantly different from previous sentences for this word.\n"
             prompt = _create_prompt(
-                word, learned_vocabulary, language, rating
+                word, learned_vocabulary, language, rating, additional_instruction
             )  # Pass rating
 
             # Generate response
@@ -222,7 +234,7 @@ class AIServiceFactory:
 
         Args:
             service_type: The type of AI service to create ("openai" or "gemini").
-
+        
         Returns:
             An instance of a concrete AIService implementation.
 

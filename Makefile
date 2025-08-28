@@ -32,13 +32,23 @@ help:
 # Build the container image
 build:
 	@echo "🔨 Building MorphCards container..."
-	podman build -t morphcards .
+	TMPDIR= TEMP= podman build -t morphcards .
 	@echo "✅ Build complete! Image: morphcards"
 
 # Run the built container
 run: build
 	@echo "🚀 Running MorphCards container..."
 	podman run --rm -p 7860:7860 --env-file .env morphcards
+
+# Open a bash shell in the running container
+bash:
+	@echo "🖥️ Opening bash shell in MorphCards container..."
+	@podman exec -it morphcards-demo bash
+
+# Open a bash shell in the morphcards service (docker compose)
+compose-shell:
+	@echo "🖥️ Opening bash shell in morphcards service..."
+	@podman compose exec morphcards bash
 
 # Run demo directly (one-shot, no build required)
 demo:
@@ -198,7 +208,7 @@ health:
 	@echo "🏥 Health check..."
 	@if curl -s http://localhost:7860 > /dev/null; then \
 		echo "✅ MorphCards is running and responding"; \
-	else \
+	else 
 		echo "❌ MorphCards is not responding"; \
 		echo "Check if container is running: make status"; \
 	fi

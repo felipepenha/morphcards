@@ -4,10 +4,11 @@ FROM python:3.11-slim
 
 # Create a non-root user and switch to it
 RUN adduser --system --group appuser
-USER appuser
 
 # Set working directory
 WORKDIR /app
+ENV TMPDIR=/tmp
+ENV PIP_TMPDIR=/tmp
 
 # Install system dependencies
 # Use root temporarily for apt-get, then switch back
@@ -16,17 +17,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
-USER appuser
 
 # Copy project files
-COPY pyproject.toml ./
+COPY pyproject.toml ./ 
 COPY src/ ./src/
-COPY README.md ./
-COPY LICENSE ./
+COPY README.md ./ 
+COPY LICENSE ./ 
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e .[demo]
+# Install Python dependencies as root
+RUN pip install --no-cache-dir --upgrade pip --cache-dir /tmp/pip_cache &&     pip install --no-cache-dir .[demo] --cache-dir /tmp/pip_cache
+
+USER appuser
 
 # Expose port for Gradio demo
 EXPOSE 7860

@@ -13,12 +13,14 @@ try:
 except ImportError:
     genai = None
 
+from morphcards.ai import _get_openai_client, _get_gemini_client
+
 def check_openai_connectivity(api_key: str) -> bool:
     if not openai:
         print("OpenAI library not installed. Skipping OpenAI connectivity check.")
         return False
     try:
-        client = openai.OpenAI(api_key=api_key)
+        client = _get_openai_client(api_key)
         # Attempt to list models as a simple connectivity test
         client.models.list()
         print("✅ OpenAI API connection successful!")
@@ -32,9 +34,8 @@ def check_gemini_connectivity(api_key: str) -> bool:
         print("Google Generative AI library not installed. Skipping Gemini connectivity check.")
         return False
     try:
-        genai.configure(api_key=api_key)
-        # Attempt a simple model listing or a dummy generation
-        genai.list_models()
+        # For Gemini, we can list models directly from genai
+        list(genai.list_models())
         print("✅ Gemini API connection successful!")
         return True
     except Exception as e:
