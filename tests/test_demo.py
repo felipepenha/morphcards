@@ -400,14 +400,18 @@ class TestMorphCardsDemo:
         assert demo.current_time == expected_current_time
         assert demo.current_card is None  # Current card should be cleared
 
-    def test_ai_sentence_variation_is_unique_on_failed_review(self, demo: MorphCardsDemo):
+    def test_ai_sentence_variation_is_unique_on_failed_review(
+        self, demo: MorphCardsDemo
+    ):
         """Test that AI sentence variation is unique on each subsequent day for a failed card."""
         # Mock the AI service factory to return a mock AI service
         with patch(
             "morphcards.ai.AIServiceFactory.create_service"
         ) as mock_create_service:
             mock_ai_service = MagicMock()
-            mock_ai_service.generate_sentence_variation.side_effect = lambda **kwargs: generate_gibberish()
+            mock_ai_service.generate_sentence_variation.side_effect = (
+                lambda **kwargs: generate_gibberish()
+            )
             mock_create_service.return_value = mock_ai_service
 
             # Ensure API key is set for the demo instance
@@ -467,7 +471,9 @@ class TestMorphCardsDemo:
                 new_sentence_prefix = "New sentence: "
                 start_index = submit_result.find(new_sentence_prefix)
                 end_index = submit_result.find(
-                    "\n", start_index + len(new_sentence_prefix) # Corrected escape sequence for newline
+                    "\n",
+                    start_index
+                    + len(new_sentence_prefix),  # Corrected escape sequence for newline
                 )
                 extracted_sentence = submit_result[
                     start_index + len(new_sentence_prefix) : end_index

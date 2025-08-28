@@ -1,7 +1,7 @@
 # MorphCards Makefile
 # Assumes podman is being used (compatible with docker)
 
-.PHONY: help build run demo test clean all install-dev install-demo mypy format audit
+.PHONY: help build run demo test clean all install-dev install-demo mypy format audit check-api
 
 # Default target
 help:
@@ -21,6 +21,7 @@ help:
 	@echo "  make format     - Run black and isort formatters"
 	@echo "  make mypy       - Run mypy static type checker"
 	@echo "  make audit      - Run security scans (Trivy and pip-audit)"
+	@echo "  make check-api  - Check API connectivity"
 	@echo ""
 	@echo "Environment:"
 	@echo "  - Ensure .env file exists with your API key"
@@ -93,6 +94,14 @@ audit:
 	podman run -q --rm -v $(PWD):/app aquasec/trivy fs --scanners vuln,secret,config --severity HIGH,CRITICAL /app
 	podman run -q --rm -v $(PWD):/app docker.io/library/python:3.11-slim bash -c "cd /app && pip install -e .[dev] && pip-audit"
 
+# Check API connectivity
+check-api:
+	@echo "🌐 Checking API connectivity..."
+	podman run -q --rm --env-file .env \
+		-v $(PWD):/app \
+		docker.io/library/python:3.11-slim \
+		bash -c "cd /app && pip -q install -e .[dev] && python scripts/check_api.py"
+
 # Clean up containers and images
 clean:
 	@echo "🧹 Cleaning up..."
@@ -100,6 +109,7 @@ clean:
 	@podman image prune -f 2>/dev/null || true
 	@podman rmi morphcards 2>/dev/null || true
 	@echo "✅ Cleanup complete!"
+
 
 # Install development dependencies locally
 install-dev:

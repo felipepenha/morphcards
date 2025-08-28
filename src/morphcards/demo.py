@@ -379,7 +379,7 @@ def create_demo_interface() -> gr.Interface:
             )
             submit_btn = gr.Button("Submit Rating", variant="primary")
             skip_btn = gr.Button(
-                "Move Forward By 1 Day", variant="secondary" 
+                "Move Forward By 1 Day", variant="secondary"
             )  # Renamed button
 
             review_output = gr.Textbox(label="Review Result", interactive=False)
@@ -415,7 +415,7 @@ def create_demo_interface() -> gr.Interface:
             )
 
             skip_btn.click(
-                demo.skip_to_next_day, outputs=[review_output, current_date_display] 
+                demo.skip_to_next_day, outputs=[review_output, current_date_display]
             )  # Update current_date_display
 
         with gr.Tab("Statistics"):

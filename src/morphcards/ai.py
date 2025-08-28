@@ -35,9 +35,11 @@ def _create_prompt(
 
     return f"""Generate a natural, grammatically correct sentence in {language} that:
 1. Contains the word '{word}' in a meaningful context
-2. Uses only vocabulary from this list: {vocab_text}
+2. Uses vocabulary from this list, as much as possible: {vocab_text}
+3. When vocabulary is too short, used vocabulary based on language level inference
 3. Sounds natural to a native speaker
 4. Is appropriate for language learning
+5. The sentence is short, from 2 to 10 words max
 {additional_instruction}
 Return only the sentence, no explanations."""
 
@@ -108,11 +110,8 @@ class OpenAIService(AIService):
                 self.client = openai.OpenAI(api_key=api_key)
 
             # Create prompt for sentence generation
-            additional_instruction = ""
-            if rating == Rating.AGAIN:
-                additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
             prompt = _create_prompt(
-                word, learned_vocabulary, language, rating, additional_instruction
+                word, learned_vocabulary, language, rating
             )  # Pass rating
 
             # Generate response
@@ -191,11 +190,8 @@ class GeminiService(AIService):
                 self.client = genai.GenerativeModel(self.model)
 
             # Create prompt for sentence generation
-            additional_instruction = ""
-            if rating == Rating.AGAIN:
-                additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
             prompt = _create_prompt(
-                word, learned_vocabulary, language, rating, additional_instruction
+                word, learned_vocabulary, language, rating
             )  # Pass rating
 
             # Generate response
