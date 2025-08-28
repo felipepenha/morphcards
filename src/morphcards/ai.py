@@ -12,6 +12,36 @@ import requests
 from morphcards.core import Rating  # Import Rating
 
 
+def _create_prompt(
+    word: str,
+    learned_vocabulary: List[str],
+    language: str,
+    rating: Optional[Rating] = None,  # Added rating parameter
+    additional_instruction: str = "",
+) -> str:
+    """Creates the prompt string for the AI API based on the given parameters.
+
+    Args:
+        word: The word to include in the sentence.
+        learned_vocabulary: A list of learned words to constrain sentence generation.
+        language: The target language for the sentence.
+        rating: The user's rating for the card (optional).
+        additional_instruction: Additional instruction to be added to the prompt.
+
+    Returns:
+        The formatted prompt string.
+    """
+    vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
+
+    return f"""Generate a natural, grammatically correct sentence in {language} that:
+1. Contains the word '{word}' in a meaningful context
+2. Uses only vocabulary from this list: {vocab_text}
+3. Sounds natural to a native speaker
+4. Is appropriate for language learning
+{additional_instruction}
+Return only the sentence, no explanations."""
+
+
 class AIService(ABC):
     """Abstract base class for AI services."""
 
@@ -78,8 +108,11 @@ class OpenAIService(AIService):
                 self.client = openai.OpenAI(api_key=api_key)
 
             # Create prompt for sentence generation
-            prompt = self._create_prompt(
-                word, learned_vocabulary, language, rating
+            additional_instruction = ""
+            if rating == Rating.AGAIN:
+                additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
+            prompt = _create_prompt(
+                word, learned_vocabulary, language, rating, additional_instruction
             )  # Pass rating
 
             # Generate response
@@ -108,38 +141,6 @@ class OpenAIService(AIService):
         except Exception as e:
             # Fallback to a simple template
             return f"I am learning the word '{word}' in {language}'."
-
-    def _create_prompt(
-        self,
-        word: str,
-        learned_vocabulary: List[str],
-        language: str,
-        rating: Optional[Rating] = None,  # Added rating parameter
-    ) -> str:
-        """Creates the prompt string for OpenAI API based on the given parameters.
-
-        Args:
-            word: The word to include in the sentence.
-            learned_vocabulary: A list of learned words to constrain sentence generation.
-            language: The target language for the sentence.
-            rating: The user's rating for the card (optional).
-
-        Returns:
-            The formatted prompt string.
-        """
-        vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
-
-        additional_instruction = ""
-        if rating == Rating.AGAIN:  # If rating is 'Again' (1)
-            additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
-
-        return f"""Generate a natural, grammatically correct sentence in {language} that:
-1. Contains the word '{word}' in a meaningful context
-2. Uses only vocabulary from this list: {vocab_text}
-3. Sounds natural to a native speaker
-4. Is appropriate for language learning
-{additional_instruction}
-Return only the sentence, no explanations."""
 
     def _handle_rate_limit(self, retry_after: int) -> None:
         """Handles API rate limiting by pausing execution.
@@ -190,8 +191,11 @@ class GeminiService(AIService):
                 self.client = genai.GenerativeModel(self.model)
 
             # Create prompt for sentence generation
-            prompt = self._create_prompt(
-                word, learned_vocabulary, language, rating
+            additional_instruction = ""
+            if rating == Rating.AGAIN:
+                additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
+            prompt = _create_prompt(
+                word, learned_vocabulary, language, rating, additional_instruction
             )  # Pass rating
 
             # Generate response
@@ -211,38 +215,6 @@ class GeminiService(AIService):
         except Exception as e:
             # Fallback to a simple template
             return f"I am learning the word '{word}' in {language}'."
-
-    def _create_prompt(
-        self,
-        word: str,
-        learned_vocabulary: List[str],
-        language: str,
-        rating: Optional[Rating] = None,  # Added rating parameter
-    ) -> str:
-        """Creates the prompt string for OpenAI API based on the given parameters.
-
-        Args:
-            word: The word to include in the sentence.
-            learned_vocabulary: A list of learned words to constrain sentence generation.
-            language: The target language for the sentence.
-            rating: The user's rating for the card (optional).
-
-        Returns:
-            The formatted prompt string.
-        """
-        vocab_text = ", ".join(learned_vocabulary[:20])  # Limit to first 20 words
-
-        additional_instruction = ""
-        if rating == Rating.AGAIN:  # If rating is 'Again' (1)
-            additional_instruction = "5. Generate a sentence that is significantly different from previous sentences for this word.\n"
-
-        return f"""Generate a natural, grammatically correct sentence in {language} that:
-1. Contains the word '{word}' in a meaningful context
-2. Uses only vocabulary from this list: {vocab_text}
-3. Sounds natural to a native speaker
-4. Is appropriate for language learning
-{additional_instruction}
-Return only the sentence, no explanations."""
 
 
 class AIServiceFactory:
