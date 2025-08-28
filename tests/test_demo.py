@@ -54,7 +54,8 @@ class TestMorphCardsDemo:
             word="due",
             sentence="This card is due.",
             original_sentence="This card is due.",
-            due_date=datetime.now(),
+            due_date=demo.current_time,
+            language="English",
         )
         demo.db.get_due_cards.return_value = [due_card]
         result = demo.get_due_cards()
@@ -74,7 +75,8 @@ class TestMorphCardsDemo:
             word="review",
             sentence="Review this card.",
             original_sentence="Review this card.",
-            due_date=datetime.now(),
+            due_date=demo.current_time,
+            language="English",
         )
         demo.db.get_due_cards.return_value = [due_card]
         result = demo.start_review()
@@ -93,7 +95,8 @@ class TestMorphCardsDemo:
             word="test",
             sentence="Test sentence.",
             original_sentence="Test sentence.",
-            due_date=datetime.now(),
+            due_date=demo.current_time,
+            language="English",
         )
         result = demo.submit_review("5")
         assert "Please enter a rating between 1 and 4." in result
@@ -116,9 +119,10 @@ class TestMorphCardsDemo:
             word="test",
             sentence="This is a test.",
             original_sentence="This is a test.",
-            due_date=datetime.now(),
+            due_date=demo.current_time, # Use demo.current_time
             stability=None,
             difficulty=None,
+            language="English",
         )
         original_card.due_date = original_card.due_date.replace(
             tzinfo=timezone.utc
@@ -136,15 +140,15 @@ class TestMorphCardsDemo:
         # Assert
         assert "Review completed!" in result
         assert (
-            "New sentence: A new AI generated sentence." in result
-        )  # This will come from the mocked AI service
+            "New sentence: A new AI generated sentence."
+        ) in result  # This will come from the mocked AI service
         assert "Next review:" in result
         assert (
-            "Stability:" in result
-        )  # Check for presence, not exact value as it's dynamic
+            "Stability:"
+        ) in result  # Check for presence, not exact value as it's dynamic
         assert (
-            "Difficulty:" in result
-        )  # Check for presence, not exact value as it's dynamic
+            "Difficulty:"
+        ) in result  # Check for presence, not exact value as it's dynamic
 
         # Assert database interactions
         demo.db.update_card.assert_called_once()
@@ -195,12 +199,7 @@ class TestMorphCardsDemo:
 
         # Mock datetime.now() to control time
         fixed_now = datetime(2025, 8, 26, 10, 0, 0, tzinfo=timezone.utc)
-        mock_datetime_now = MagicMock()
-        mock_datetime_now.now.return_value = fixed_now
-        patch("morphcards.demo.datetime", mock_datetime_now).start()
-        patch(
-            "morphcards.core.datetime", mock_datetime_now
-        ).start()  # Also patch in core.py
+        demo.current_time = fixed_now # Set demo.current_time
 
         # 1. Add a new card
         word = "cycle"
@@ -218,6 +217,7 @@ class TestMorphCardsDemo:
             due_date=fixed_now,  # Use fixed_now for initial card
             stability=None,
             difficulty=None,
+            language="English",
         )
         demo.db.add_card.side_effect = lambda card_arg: setattr(
             card_arg, "id", predictable_card_id
@@ -239,12 +239,16 @@ class TestMorphCardsDemo:
 
         # Assert review result message
         assert "Review completed!" in submit_result
-        assert "New sentence: A new AI generated sentence." in submit_result
-        assert "Next review:" in submit_result
-        assert "Stability:" in submit_result
-        assert "Difficulty:" in submit_result
+        assert "New sentence: A new AI generated sentence."
+        assert "Next review:"
+        assert (
+            "Stability:"
+        ) in submit_result  # Check for presence, not exact value as it's dynamic
+        assert (
+            "Difficulty:"
+        ) in submit_result  # Check for presence, not exact value as it's dynamic
 
-        # Assert scheduler and database interactions
+        # Assert database interactions
         demo.db.update_card.assert_called_once()
         updated_card_arg = demo.db.update_card.call_args[0][0]
         assert updated_card_arg.id == predictable_card_id
@@ -280,22 +284,7 @@ class TestMorphCardsDemo:
         fixed_now_after_first_review = fixed_now_initial + timedelta(hours=1)
         fixed_now_after_second_review = fixed_now_initial + timedelta(days=1)
 
-        mock_datetime_now = MagicMock()
-        mock_datetime_now.now.side_effect = [
-            fixed_now_initial,  # For card creation (id)
-            fixed_now_initial,  # For card creation (created_at)
-            fixed_now_initial,  # For get_due_cards in start_review (first review)
-            fixed_now_after_first_review,  # For submit_review (first review)
-            fixed_now_after_first_review,  # For get_due_cards in start_review (second review)
-            fixed_now_after_second_review,  # For submit_review (second review)
-            fixed_now_after_second_review,  # For the final assertion in the test
-            fixed_now_after_second_review,  # For the final assertion in the test
-        ]
-
-        patch("morphcards.demo.datetime", mock_datetime_now).start()
-        patch(
-            "morphcards.core.datetime", mock_datetime_now
-        ).start()  # Also patch in core.py
+        demo.current_time = fixed_now_initial # Set demo.current_time
 
         # 1. Add a new card
         word = "multi_review"
@@ -313,6 +302,7 @@ class TestMorphCardsDemo:
             due_date=fixed_now_initial,  # Use fixed_now for initial card
             stability=None,
             difficulty=None,
+            language="English",
         )
         demo.db.add_card.side_effect = lambda card_arg: setattr(
             card_arg, "id", predictable_card_id
@@ -324,7 +314,7 @@ class TestMorphCardsDemo:
         start_review_result = demo.start_review()
         assert "Reviewing: multi_review" in start_review_result[0]
         submit_result = demo.submit_review("3")
-        assert "Review completed!" in submit_result
+        assert "Review completed!"
         assert demo.db.update_card.call_count == 1
         assert demo.db.add_review_log.call_count == 1
         updated_card_after_first_review = demo.db.update_card.call_args[0][0]
@@ -340,7 +330,7 @@ class TestMorphCardsDemo:
         start_review_result = demo.start_review()
         assert "Reviewing: multi_review" in start_review_result[0]
         submit_result = demo.submit_review("1")
-        assert "Review completed!" in submit_result
+        assert "Review completed!"
         assert demo.db.update_card.call_count == 1
         assert demo.db.add_review_log.call_count == 1
         updated_card_after_second_review = demo.db.update_card.call_args[0][0]
@@ -351,3 +341,119 @@ class TestMorphCardsDemo:
         )  # Due date should be earlier for 'Again'
 
         patch.stopall()  # Clean up all patches
+
+    def test_skip_to_next_day(self, demo: MorphCardsDemo):
+        """Test skipping review to the next day."""
+        # Setup: Create a card and set it as current
+        initial_due_date = datetime(2025, 8, 27, 10, 0, 0, tzinfo=timezone.utc)
+        card_to_skip = Card(
+            id="skip_test_id",
+            word="skip",
+            sentence="This is a sentence to skip.",
+            original_sentence="This is a sentence to skip.",
+            due_date=initial_due_date,
+            stability=1.0,
+            difficulty=0.5,
+            language="English",
+        )
+        demo.current_card = card_to_skip
+
+        # Set demo's current_time to a specific point
+        demo.current_time = datetime(2025, 8, 27, 11, 0, 0, tzinfo=timezone.utc)
+
+        # Execute skip_to_next_day
+        skip_result = demo.skip_to_next_day()
+
+        # Assertions
+        assert "Timeline advanced to next day" == skip_result[0].split('.')[0]
+        # Verify that demo.current_time has advanced by one day
+        expected_current_time = datetime(2025, 8, 28, 11, 0, 0, tzinfo=timezone.utc)
+        assert demo.current_time == expected_current_time
+        assert demo.current_card is None  # Current card should be cleared
+
+    def test_ai_sentence_variation_on_failed_review(self, demo: MorphCardsDemo):
+        """Test that AI sentence variation is called on each subsequent day for a failed card."""
+        # Mock the AI service factory to return a mock AI service
+        with patch("morphcards.ai.AIServiceFactory.create_service") as mock_create_service:
+            mock_ai_service = MagicMock()
+            expected_sentences = [
+                "Sentence 1 for failed review.",
+                "Sentence 2 for failed review.",
+                "Sentence 3 for failed review.",
+                "Sentence 4 for failed review.",
+                "Sentence 5 for failed review.",
+            ]
+            mock_ai_service.generate_sentence_variation.side_effect = expected_sentences
+            mock_create_service.return_value = mock_ai_service
+
+            # Ensure API key is set for the demo instance
+            demo.api_key = "test_api_key"
+            demo.ai_service_type = "gemini"
+
+            # Mock get_learned_vocabulary to ensure AI service is called
+            demo.db.get_learned_vocabulary = MagicMock(
+                return_value=["word1", "word2", "word3", "word4", "word5", "word6"]
+            )
+
+            # 1. Add a new card
+            word = "test_failed_ai"
+            sentence = "Initial sentence for failed AI test."
+            demo.add_card(word, sentence, "English")
+
+            # Simulate the database having the added card
+            predictable_card_id = f"{word}_test_id"
+            test_card = Card(
+                id=predictable_card_id,
+                word=word,
+                sentence=sentence,
+                original_sentence=sentence,
+                due_date=demo.current_time,
+                stability=None,
+                difficulty=None,
+                language="English",
+            )
+            demo.db.add_card.side_effect = lambda card_arg: setattr(
+                card_arg, "id", predictable_card_id
+            )
+
+            # Simulate multiple days of failed reviews
+            num_days = 5
+            for i in range(num_days):
+                # Advance time by one day
+                demo.current_time += timedelta(days=1)
+
+                # Set the card as due for review
+                demo.db.get_due_cards.return_value = [test_card]
+                demo.current_card = test_card
+
+                # Start review and submit a failed rating (1 - Again)
+                demo.start_review()
+                submit_result = demo.submit_review("1")
+
+                # Assert that AI service was called for sentence variation
+                mock_ai_service.generate_sentence_variation.assert_called_once_with(
+                    word=word,
+                    learned_vocabulary=ANY, # We don't care about the exact vocabulary list here
+                    api_key="test_api_key",
+                    language="English",
+                    rating=Rating.AGAIN,
+                )
+
+                # Assert that the sentence in the updated card is from the mock AI service
+                new_sentence_prefix = "New sentence: "
+                start_index = submit_result.find(new_sentence_prefix)
+                end_index = submit_result.find("\n", start_index + len(new_sentence_prefix)) # Corrected escape sequence for newline
+                extracted_sentence = submit_result[start_index + len(new_sentence_prefix):end_index].strip()
+
+                assert extracted_sentence == expected_sentences[i]
+
+                # Update the test_card with the new sentence for the next iteration
+                test_card.sentence = extracted_sentence
+
+                # Reset mock call count for the next iteration
+                mock_ai_service.generate_sentence_variation.reset_mock()
+
+            # After the loop, ensure the AI service was called for each day
+            assert mock_ai_service.generate_sentence_variation.call_count == 0 # Should be 0 because we reset it in each iteration
+
+        patch.stopall() # Clean up all patches

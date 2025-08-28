@@ -15,6 +15,7 @@ class TestCard:
             sentence="Hello world!",
             original_sentence="Hello world!",
             due_date=datetime.now(),
+            language="English",
         )
         assert card.word == "hello"
         assert card.sentence == "Hello world!"

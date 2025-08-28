@@ -1,7 +1,7 @@
-"""Demo interface for MorphCards using Gradio."""
+"Demo interface for MorphCards using Gradio."
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 import gradio as gr
@@ -30,6 +30,7 @@ class MorphCardsDemo:
         self.db = VocabularyDatabase()
         self.scheduler = FSRSScheduler()
         self.current_card: Optional[Card] = None
+        self.current_time: datetime = datetime.now(timezone.utc) # Added current_time
 
         load_dotenv()
         gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -40,6 +41,8 @@ class MorphCardsDemo:
         else:
             self.api_key = ""
             self.ai_service_type = "openai"  # Default to openai if no gemini key
+
+        
 
     def add_card(self, word: str, sentence: str, language: str) -> str:
         """Adds a new flashcard to the vocabulary database.
@@ -56,14 +59,15 @@ class MorphCardsDemo:
             return "Please provide both word and sentence."
 
         card = Card(
-            id=f"{word}_{datetime.now(timezone.utc).timestamp()}",
+            id=f"{word}_{self.current_time.timestamp()}", # Use current_time
             word=word.strip(),
             sentence=sentence.strip(),
             original_sentence=sentence.strip(),
             stability=None,
             difficulty=None,
-            due_date=datetime.now(timezone.utc),
-            created_at=datetime.now(timezone.utc),
+            due_date=self.current_time, # Use current_time
+            created_at=self.current_time, # Use current_time
+            language=language, # Pass the language here
         )
 
         self.db.add_card(card)
@@ -76,7 +80,7 @@ class MorphCardsDemo:
             A formatted string listing the due cards, or a message indicating
             that no cards are due.
         """
-        due_cards = self.db.get_due_cards(datetime.now(timezone.utc))
+        due_cards = self.db.get_due_cards(self.current_time) # Use current_time
 
         if not due_cards:
             return "No cards due for review!"
@@ -99,7 +103,7 @@ class MorphCardsDemo:
             - A prompt for user input.
             If no cards are due, returns a tuple of empty strings and a message.
         """
-        due_cards = self.db.get_due_cards(datetime.now(timezone.utc))
+        due_cards = self.db.get_due_cards(self.current_time) # Use current_time
 
         if not due_cards:
             return "No cards due for review!", "", "", "", ""
@@ -145,10 +149,11 @@ class MorphCardsDemo:
             updated_card, review_log = self.scheduler.review_card(
                 card=self.current_card,
                 rating=rating,
-                now=datetime.now(timezone.utc),
+                now=self.current_time, # Use current_time
                 ai_api_key=self.api_key,
                 vocabulary_database=self.db,
                 ai_service=ai_service,
+                language=self.current_card.language, # Pass the language here
             )
 
             # Update database
@@ -172,6 +177,29 @@ class MorphCardsDemo:
 
             traceback.print_exc()
             return f"Error during review: {str(e)}"
+
+    def skip_to_next_day(self) -> str:
+        """Skips the current card's due date to the next day.
+
+        This is primarily for testing and demonstration purposes to quickly advance
+        the review schedule of a card.
+
+        Returns:
+            A string message indicating the new due date of the skipped card,
+            or an error message if no card is currently selected.
+        """
+        # Remove the check for self.current_card
+        # if not self.current_card:
+        #     return "No card selected to skip."
+
+        # Advance the due date by one day
+        self.current_time += timedelta(days=1) # Advance current_time
+        self.current_card = None  # Clear current card after skipping
+
+        return (
+            f"Timeline advanced to next day. Current time: {self.current_time.strftime('%Y-%m-%d %H:%M')}",
+            self.current_time.strftime('%Y-%m-%d %H:%M')
+        )
 
     def set_api_key(self, api_key: str, service_type: str) -> str:
         """Sets the API key and AI service type for sentence generation.
@@ -288,6 +316,7 @@ def create_demo_interface() -> gr.Interface:
             key_output = gr.Textbox(label="API Key Status", interactive=False)
 
             with gr.Row():
+                current_date_display = gr.Textbox(label="Current Date", interactive=False, value=demo.current_time.strftime('%Y-%m-%d %H:%M'))
                 get_due_btn = gr.Button("Show Due Cards")
                 start_review_btn = gr.Button("Start Review", variant="primary")
 
@@ -303,6 +332,7 @@ def create_demo_interface() -> gr.Interface:
                 label="Your Rating", placeholder="Enter 1, 2, 3, or 4"
             )
             submit_btn = gr.Button("Submit Rating", variant="primary")
+            skip_btn = gr.Button("Move Forward By 1 Day", variant="secondary") # Renamed button
 
             review_output = gr.Textbox(label="Review Result", interactive=False)
 
@@ -326,9 +356,9 @@ def create_demo_interface() -> gr.Interface:
                 ],
             )
 
-            submit_btn.click(
-                demo.submit_review, inputs=[rating_input], outputs=[review_output]
-            )
+            submit_btn.click(demo.submit_review, inputs=[rating_input], outputs=[review_output])
+
+            skip_btn.click(demo.skip_to_next_day, outputs=[review_output, current_date_display]) # Update current_date_display
 
         with gr.Tab("Statistics"):
             gr.Markdown("### Vocabulary Statistics")

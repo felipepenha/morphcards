@@ -23,6 +23,7 @@ class TestVocabularyDatabase:
                 sentence="Hello world!",
                 original_sentence="Hello world!",
                 due_date=datetime.now(),
+                language="English",
             )
             db.add_card(card)
 
@@ -41,6 +42,7 @@ class TestVocabularyDatabase:
                 sentence="Hello world!",
                 original_sentence="Hello world!",
                 due_date=datetime.now(),
+                language="English",
             )
             db.add_card(card)
 

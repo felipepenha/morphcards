@@ -70,6 +70,7 @@ class Card(BaseModel):
     )
     review_count: int = Field(default=0, description="Number of times reviewed")
     state: State = Field(default=State.Learning, description="FSRS state")
+    language: str = Field(..., description="Language of the card") # Added language field
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -150,6 +151,7 @@ class FSRSScheduler:
         ai_api_key: str,
         vocabulary_database: "VocabularyDatabase",
         ai_service: "AIService",
+        language: str, # Added language parameter
     ) -> Tuple[Card, ReviewLog]:
         """Processes a card review, updates its FSRS parameters, and generates a new sentence.
 
@@ -160,6 +162,7 @@ class FSRSScheduler:
             ai_api_key: API key for the AI service.
             vocabulary_database: The database instance to retrieve learned vocabulary.
             ai_service: The AI service instance for sentence generation.
+            language: The language of the card.
 
         Returns:
             A tuple containing the updated Card object and a ReviewLog entry
@@ -195,6 +198,8 @@ class FSRSScheduler:
             vocabulary_database,
             ai_service,
             ai_api_key,
+            Rating(rating_int),
+            language, # Pass the language here
         )
 
         # Update card with new sentence and FSRS parameters
@@ -210,6 +215,7 @@ class FSRSScheduler:
             last_reviewed=now,
             review_count=card.review_count + 1,
             state=updated_fsrs_card.state,
+            language=card.language,
         )
 
         # Create review log
@@ -236,6 +242,8 @@ class FSRSScheduler:
         vocabulary_database: "VocabularyDatabase",
         ai_service: "AIService",
         api_key: str,
+        rating: Rating,
+        language: str, # Added language parameter
     ) -> str:
         """Generates a new sentence variation using an AI service.
 
@@ -248,6 +256,8 @@ class FSRSScheduler:
             vocabulary_database: The database instance to retrieve learned vocabulary.
             ai_service: The AI service instance to use for generation.
             api_key: The API key for the AI service.
+            rating: The user's rating for the card.
+            language: The language of the card.
 
         Returns:
             A new AI-generated sentence, or the original sentence if generation fails.
@@ -265,6 +275,8 @@ class FSRSScheduler:
                 word=word,
                 learned_vocabulary=learned_words,
                 api_key=api_key,
+                language=language, # Pass the language parameter
+                rating=rating,
             )
 
             return new_sentence
