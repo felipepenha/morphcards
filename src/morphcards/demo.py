@@ -155,6 +155,7 @@ class MorphCardsDemo:
                 vocabulary_database=self.db,
                 ai_service=ai_service,
                 language=self.current_card.language,  # Pass the language here
+                mastered_words_override=self.mastered_words_override,  # Pass the override here
             )
 
             # Update database

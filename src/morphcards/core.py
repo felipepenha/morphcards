@@ -1,11 +1,11 @@
 """Core classes for MorphCards spaced repetition system."""
 
-import uuid  # Added import for uuid
+import uuid
 from datetime import datetime, timezone
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
-from fsrs import Card as FSRS_Card  # Import State directly
+from fsrs import Card as FSRS_Card
 from fsrs import Rating as FSRS_Rating
 from fsrs import Scheduler, State
 from pydantic import BaseModel, ConfigDict, Field
@@ -93,7 +93,7 @@ class ReviewLog(BaseModel):
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         description="Unique identifier for the review log",
-    )  # Added id field
+    )
     card_id: str = Field(..., description="ID of the reviewed card")
     review_time: datetime = Field(..., description="When the review was completed")
     rating: Rating = Field(..., description="User's rating of recall")
@@ -118,7 +118,7 @@ class FSRSScheduler:
             parameters: Optional list of custom FSRS parameters. If None,
                         default parameters for FSRS v4.0.0 are used.
         """
-        self._fsrs: Scheduler  # Declare the attribute with its type hint
+        self._fsrs: Scheduler
 
         if parameters is None:
             # Default parameters for FSRS v4.0.0
@@ -155,7 +155,8 @@ class FSRSScheduler:
         ai_api_key: str,
         vocabulary_database: "VocabularyDatabase",
         ai_service: "AIService",
-        language: str,  # Added language parameter
+        language: str,
+        mastered_words_override: Optional[List[str]] = None,
     ) -> Tuple[Card, ReviewLog]:
         """Processes a card review, updates its FSRS parameters, and generates a new sentence.
 
@@ -167,15 +168,14 @@ class FSRSScheduler:
             vocabulary_database: The database instance to retrieve learned vocabulary.
             ai_service: The AI service instance for sentence generation.
             language: The language of the card.
+            mastered_words_override: Optional list of words to use for AI sentence generation.
 
         Returns:
             A tuple containing the updated Card object and a ReviewLog entry
             for the current review.
         """
-        # Convert rating to int if it's an enum
         rating_int = rating.value if isinstance(rating, Rating) else rating
 
-        # Convert morphcards.core.Card to fsrs.Card
         fsrs_card = FSRS_Card(
             card_id=hash(card.id),
             state=card.state,
@@ -190,12 +190,10 @@ class FSRSScheduler:
             ),
         )
 
-        # Get FSRS scheduling
         updated_fsrs_card, fsrs_review_log = self._fsrs.review_card(
             fsrs_card, FSRS_Rating(rating_int), now.replace(tzinfo=timezone.utc), None
-        )  # State is already set in fsrs_card
+        )
 
-        # Generate new sentence using AI
         new_sentence = self._generate_new_sentence(
             card.word,
             card.original_sentence,
@@ -203,10 +201,10 @@ class FSRSScheduler:
             ai_service,
             ai_api_key,
             Rating(rating_int),
-            language,  # Pass the language here
+            language,
+            mastered_words_override,
         )
 
-        # Update card with new sentence and FSRS parameters
         updated_card = Card(
             id=card.id,
             word=card.word,
@@ -222,9 +220,8 @@ class FSRSScheduler:
             language=card.language,
         )
 
-        # Create review log
         review_log = ReviewLog(
-            id=str(uuid.uuid4()),  # Generate a unique ID for the review log
+            id=str(uuid.uuid4()),
             card_id=card.id,
             review_time=now,
             rating=Rating(rating_int),
@@ -247,7 +244,8 @@ class FSRSScheduler:
         ai_service: "AIService",
         api_key: str,
         rating: Rating,
-        language: str,  # Added language parameter
+        language: str,
+        mastered_words_override: Optional[List[str]] = None,
     ) -> str:
         """Generates a new sentence variation using an AI service.
 
@@ -262,24 +260,25 @@ class FSRSScheduler:
             api_key: The API key for the AI service.
             rating: The user's rating for the card.
             language: The language of the card.
+            mastered_words_override: Optional list of words to use for AI sentence generation.
 
         Returns:
             A new AI-generated sentence, or the original sentence if generation fails.
         """
         try:
-            # Get learned vocabulary
-            learned_words = vocabulary_database.get_learned_vocabulary()
+            if mastered_words_override is not None:
+                learned_words = mastered_words_override
+            else:
+                learned_words = vocabulary_database.get_learned_vocabulary()
 
-            # If vocabulary is too short, fallback to original sentence
-            if len(learned_words) < 5:  # Minimum threshold
+            if len(learned_words) < 5:
                 return original_sentence
 
-            # Generate new sentence using AI
             new_sentence = ai_service.generate_sentence_variation(
                 word=word,
                 learned_vocabulary=learned_words,
                 api_key=api_key,
-                language=language,  # Pass the language parameter
+                language=language,
                 rating=rating,
             )
 
@@ -289,5 +288,4 @@ class FSRSScheduler:
             print(
                 f"DEBUG: Error generating new sentence: {e}. Falling back to original sentence."
             )
-            # Fallback to original sentence on any error
             return original_sentence
