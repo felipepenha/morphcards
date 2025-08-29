@@ -37,20 +37,24 @@ class MorphCardsDemo:
 
         load_dotenv()
         gemini_api_key = os.getenv("GEMINI_API_KEY")
-        openai_api_key = os.getenv("OPENAI_API_KEY") # Added for OpenAI model name
+        openai_api_key = os.getenv("OPENAI_API_KEY")  # Added for OpenAI model name
 
         if gemini_api_key:
             self.api_key = gemini_api_key
             self.ai_service_type = "gemini"
-            self.model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash") # Get model name
-        elif openai_api_key: # Handle OpenAI if Gemini not available
+            self.model_name = os.getenv(
+                "GEMINI_MODEL_NAME", "gemini-2.5-flash"
+            )  # Get model name
+        elif openai_api_key:  # Handle OpenAI if Gemini not available
             self.api_key = openai_api_key
             self.ai_service_type = "openai"
-            self.model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo") # Get model name
+            self.model_name = os.getenv(
+                "OPENAI_MODEL_NAME", "gpt-3.5-turbo"
+            )  # Get model name
         else:
             self.api_key = ""
-            self.ai_service_type = "gemini" # Default to gemini
-            self.model_name = "gemini-2.5-flash" # Default model name
+            self.ai_service_type = "gemini"  # Default to gemini
+            self.model_name = "gemini-2.5-flash"  # Default model name
 
     def add_card(self, word: str, sentence: str, language: str) -> str:
         """Adds a new flashcard to the vocabulary database.
@@ -161,7 +165,9 @@ class MorphCardsDemo:
 
         try:
             # Process review
-            ai_service = AIServiceFactory.create_service(self.ai_service_type, self.model_name)
+            ai_service = AIServiceFactory.create_service(
+                self.ai_service_type, self.model_name
+            )
 
             updated_card, review_log = self.scheduler.review_card(
                 card=self.current_card,
@@ -387,7 +393,7 @@ def create_demo_interface() -> gr.Interface:
             )
             submit_btn = gr.Button("Submit Rating", variant="primary")
             skip_btn = gr.Button(
-                "Move Forward By 1 Day", variant="secondary" 
+                "Move Forward By 1 Day", variant="secondary"
             )  # Renamed button
 
             review_output = gr.Textbox(label="Review Result", interactive=False)
@@ -423,7 +429,7 @@ def create_demo_interface() -> gr.Interface:
             )
 
             skip_btn.click(
-                demo.skip_to_next_day, outputs=[review_output, current_date_display] 
+                demo.skip_to_next_day, outputs=[review_output, current_date_display]
             )  # Update current_date_display
 
         with gr.Tab("Statistics"):

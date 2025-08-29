@@ -121,7 +121,9 @@ class OpenAIService(AIService):
         )  # Pass rating
 
         try:
-            print(f"Attempting to generate content with OpenAI model: {self.model_name}")
+            print(
+                f"Attempting to generate content with OpenAI model: {self.model_name}"
+            )
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
@@ -195,7 +197,9 @@ class GeminiService(AIService):
         )  # Pass rating
 
         try:
-            print(f"Attempting to generate content with Gemini model: {self.model_name}")
+            print(
+                f"Attempting to generate content with Gemini model: {self.model_name}"
+            )
             # Initialize client with API key and current model
             self.client = _get_gemini_client(api_key, self.model_name)
 
@@ -223,7 +227,9 @@ class AIServiceFactory:
     """Factory for creating AI service instances."""
 
     @staticmethod
-    def create_service(service_type: str, model_name: Optional[str] = None) -> AIService:
+    def create_service(
+        service_type: str, model_name: Optional[str] = None
+    ) -> AIService:
         """Creates an instance of an AI service based on the specified type.
 
         Args:

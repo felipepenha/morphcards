@@ -210,12 +210,14 @@ class FSRSScheduler:
         )
 
         # Determine which sentence to use for the updated card
-        sentence_to_use = new_sentence if card.review_count > 0 else card.original_sentence
+        sentence_to_use = (
+            new_sentence if card.review_count > 0 else card.original_sentence
+        )
 
         updated_card = Card(
             id=card.id,
             word=card.word,
-            sentence=sentence_to_use, # Modified line
+            sentence=sentence_to_use,  # Modified line
             original_sentence=card.original_sentence,
             stability=updated_fsrs_card.stability,
             difficulty=updated_fsrs_card.difficulty,

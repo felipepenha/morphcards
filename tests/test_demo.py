@@ -143,7 +143,7 @@ class TestMorphCardsDemo:
         # Setup
         demo.api_key = "fake_api_key"
         demo.ai_service_type = "openai"
-        demo.model_name = "gpt-3.5-turbo" # Set model name for test
+        demo.model_name = "gpt-3.5-turbo"  # Set model name for test
 
         mock_generate_new_sentence = patch(
             "morphcards.core.FSRSScheduler._generate_new_sentence",
@@ -159,7 +159,7 @@ class TestMorphCardsDemo:
             stability=None,
             difficulty=None,
             language="English",
-            review_count=0, # Ensure review_count is 0 for the first review
+            review_count=0,  # Ensure review_count is 0 for the first review
         )
         original_card.due_date = original_card.due_date.replace(
             tzinfo=timezone.utc
@@ -177,7 +177,9 @@ class TestMorphCardsDemo:
 
         # Assertions for the first review
         assert "Review completed!" in result_first_review
-        assert "New sentence: This is a test." in result_first_review # Expect original sentence
+        assert (
+            "New sentence: This is a test." in result_first_review
+        )  # Expect original sentence
         assert "Next review:" in result_first_review
         assert "Stability:" in result_first_review
         assert "Difficulty:" in result_first_review
@@ -191,19 +193,21 @@ class TestMorphCardsDemo:
         assert updated_card_after_first_review.review_count == 1
         demo.db.update_card.reset_mock()
         demo.db.add_review_log.reset_mock()
-        mock_generate_new_sentence.reset_mock() # Reset mock for next call
+        mock_generate_new_sentence.reset_mock()  # Reset mock for next call
 
         # --- Second Review ---
         print("\n--- Second Review ---")
         # Simulate the card being due again
         demo.current_card = updated_card_after_first_review
-        demo.current_card.due_date = demo.current_time # Make it due now for the test
+        demo.current_card.due_date = demo.current_time  # Make it due now for the test
 
         result_second_review = demo.submit_review("3")
 
         # Assertions for the second review
         assert "Review completed!" in result_second_review
-        assert "New sentence: A new AI generated sentence." in result_second_review # Expect AI generated sentence
+        assert (
+            "New sentence: A new AI generated sentence." in result_second_review
+        )  # Expect AI generated sentence
         assert "Next review:" in result_second_review
         assert "Stability:" in result_second_review
         assert "Difficulty:" in result_second_review
@@ -216,7 +220,7 @@ class TestMorphCardsDemo:
         updated_card_after_second_review = demo.db.update_card.call_args[0][0]
         assert updated_card_after_second_review.review_count == 2
 
-        patch.stopall() # Clean up all patches
+        patch.stopall()  # Clean up all patches
 
     def test_set_api_key(self, demo: MorphCardsDemo):
         """Test setting the API key and service type."""
@@ -264,7 +268,7 @@ class TestMorphCardsDemo:
             stability=None,
             difficulty=None,
             language="English",
-            review_count=0, # Ensure review_count is 0 for the first review
+            review_count=0,  # Ensure review_count is 0 for the first review
         )
         demo.db.get_card_by_word.return_value = added_card_from_db
 
@@ -282,14 +286,16 @@ class TestMorphCardsDemo:
 
         # Assert review result message
         assert "Review completed!" in submit_result
-        assert "New sentence: This is a test sentence for the cycle." in submit_result # Expect original sentence for first review
+        assert (
+            "New sentence: This is a test sentence for the cycle." in submit_result
+        )  # Expect original sentence for first review
         assert "Next review:" in submit_result
         assert "Stability:" in submit_result
         assert "Difficulty:" in submit_result
 
         # AI service should be called, but its return value is conditionally used
         mock_generate_new_sentence.assert_called_once()
-        mock_generate_new_sentence.reset_mock() # Reset mock for next call
+        mock_generate_new_sentence.reset_mock()  # Reset mock for next call
 
         # Assert database interactions
         demo.db.update_card.assert_called_once()
@@ -321,13 +327,13 @@ class TestMorphCardsDemo:
         updated_card_for_second_review = Card(
             id=updated_card_arg.id,
             word=updated_card_arg.word,
-            sentence="A new AI generated sentence.", # Explicitly set to the mocked AI sentence
+            sentence="A new AI generated sentence.",  # Explicitly set to the mocked AI sentence
             original_sentence=updated_card_arg.original_sentence,
-            due_date=demo.current_time, # Make it due now for the test
+            due_date=demo.current_time,  # Make it due now for the test
             stability=updated_card_arg.stability,
             difficulty=updated_card_arg.difficulty,
             language=updated_card_arg.language,
-            review_count=updated_card_arg.review_count, # This will be incremented by submit_review
+            review_count=updated_card_arg.review_count,  # This will be incremented by submit_review
         )
         demo.current_card = updated_card_for_second_review
 
@@ -340,7 +346,10 @@ class TestMorphCardsDemo:
 
         # Assert review result message
         assert "Review completed!" in submit_result_2_str
-        assert f"New sentence: {mock_generate_new_sentence.return_value}" in submit_result_2_str # Expect AI generated sentence
+        assert (
+            f"New sentence: {mock_generate_new_sentence.return_value}"
+            in submit_result_2_str
+        )  # Expect AI generated sentence
         assert "Next review:" in submit_result_2_str
         assert "Stability:" in submit_result_2_str
         assert "Difficulty:" in submit_result_2_str
@@ -379,7 +388,7 @@ class TestMorphCardsDemo:
             stability=None,
             difficulty=None,
             language="English",
-            review_count=0, # Ensure review_count is 0 for the first review
+            review_count=0,  # Ensure review_count is 0 for the first review
         )
         demo.db.get_card_by_word.return_value = added_card_from_db
         demo.db.get_due_cards.return_value = [added_card_from_db]
@@ -395,7 +404,7 @@ class TestMorphCardsDemo:
         assert updated_card_after_first_review.review_count == 1
         demo.db.update_card.reset_mock()
         demo.db.add_review_log.reset_mock()
-        mock_generate_new_sentence.reset_mock() # Reset mock for next call
+        mock_generate_new_sentence.reset_mock()  # Reset mock for next call
 
         # Second review (Rating 1 - Again)
         # Simulate the card being due again (e.g., by advancing time or mocking get_due_cards)
@@ -415,7 +424,7 @@ class TestMorphCardsDemo:
             < updated_card_after_first_review.due_date
         )  # Due date should be earlier for 'Again'
 
-        mock_generate_new_sentence.assert_called_once() # AI service should be called for the second review
+        mock_generate_new_sentence.assert_called_once()  # AI service should be called for the second review
         patch.stopall()  # Clean up all patches
 
     def test_skip_to_next_day(self, demo: MorphCardsDemo):
@@ -465,7 +474,7 @@ class TestMorphCardsDemo:
             # Ensure API key is set for the demo instance
             demo.api_key = "test_api_key"
             demo.ai_service_type = "gemini"
-            demo.model_name = "gemini-pro" # Set model name for test
+            demo.model_name = "gemini-pro"  # Set model name for test
 
             # Mock get_learned_vocabulary to ensure AI service is called
             demo.db.get_learned_vocabulary = MagicMock(
@@ -489,7 +498,7 @@ class TestMorphCardsDemo:
                 stability=None,
                 difficulty=None,
                 language="English",
-                review_count=0, # Ensure review_count is 0 for the first review
+                review_count=0,  # Ensure review_count is 0 for the first review
             )
             demo.db.get_card_by_word.return_value = test_card
 
@@ -519,11 +528,11 @@ class TestMorphCardsDemo:
                 ].strip()
 
                 # Assert that AI service was called for sentence variation only from the second review
-                if i == 0: # First review
+                if i == 0:  # First review
                     # AI service should be called, but its return value is conditionally used
                     mock_ai_service.generate_sentence_variation.assert_called_once()
                     assert extracted_sentence == test_card.original_sentence
-                else: # Subsequent reviews
+                else:  # Subsequent reviews
                     mock_ai_service.generate_sentence_variation.assert_called_once_with(
                         word=word,
                         learned_vocabulary=ANY,  # We don't care about the exact vocabulary list here
@@ -545,9 +554,11 @@ class TestMorphCardsDemo:
 
                 # Reset mock call count for the next iteration
                 mock_ai_service.generate_sentence_variation.reset_mock()
-                demo.db.update_card.reset_mock() # Reset mock for next call
+                demo.db.update_card.reset_mock()  # Reset mock for next call
 
             # After the loop, ensure the AI service was called for each day (except the first)
-            assert mock_ai_service.generate_sentence_variation.call_count == 0 # Should be 0 because we reset it in each iteration
+            assert (
+                mock_ai_service.generate_sentence_variation.call_count == 0
+            )  # Should be 0 because we reset it in each iteration
 
         patch.stopall()  # Clean up all patches
