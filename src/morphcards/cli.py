@@ -39,6 +39,10 @@ def main() -> None:
         default="openai",
         help="AI service to use",
     )
+    review_parser.add_argument(
+        "--model-name",
+        help="Specific model name to use (e.g., gpt-3.5-turbo, gemini-2.5-flash)",
+    )
     review_parser.add_argument("--api-key", help="API key for AI service")
 
     # Stats command
@@ -57,7 +61,7 @@ def main() -> None:
         if args.command == "add":
             add_card(db, args.word, args.sentence, args.language)
         elif args.command == "review":
-            review_cards(db, args.ai_service, args.api_key)
+            review_cards(db, args.ai_service, args.api_key, args.model_name)
         elif args.command == "stats":
             show_stats(db)
         else:
@@ -67,35 +71,11 @@ def main() -> None:
         db.close()
 
 
-def add_card(db: VocabularyDatabase, word: str, sentence: str, language: str) -> None:
-    """Adds a new flashcard to the database.
-
-    Args:
-        db: The VocabularyDatabase instance.
-        word: The word to be learned.
-        sentence: A sentence containing the word.
-        language: The language of the card (e.g., "English").
-    """
-    from datetime import datetime, timedelta
-
-    card = Card(
-        id=f"{word}_{datetime.now().timestamp()}",
-        word=word,
-        sentence=sentence,
-        original_sentence=sentence,
-        stability=0.0,
-        difficulty=0.0,
-        due_date=datetime.now(),
-        created_at=datetime.now(),
-    )
-
-    db.add_card(card)
-    print(f"Added card for word: {word}")
-    print(f"Sentence: {sentence}")
-
-
 def review_cards(
-    db: VocabularyDatabase, ai_service_type: str, api_key: Optional[str]
+    db: VocabularyDatabase,
+    ai_service_type: str,
+    api_key: Optional[str],
+    model_name: Optional[str],
 ) -> None:
     """Initiates a review session for due cards.
 
@@ -125,7 +105,7 @@ def review_cards(
 
     # Initialize scheduler and AI service
     scheduler = Scheduler()
-    ai_service = AIServiceFactory.create_service(ai_service_type)
+    ai_service = AIServiceFactory.create_service(ai_service_type, model_name)
 
     for card in due_cards:
         print(f"\n--- Reviewing: {card.word} ---")

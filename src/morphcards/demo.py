@@ -37,13 +37,20 @@ class MorphCardsDemo:
 
         load_dotenv()
         gemini_api_key = os.getenv("GEMINI_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY") # Added for OpenAI model name
 
         if gemini_api_key:
             self.api_key = gemini_api_key
             self.ai_service_type = "gemini"
+            self.model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash") # Get model name
+        elif openai_api_key: # Handle OpenAI if Gemini not available
+            self.api_key = openai_api_key
+            self.ai_service_type = "openai"
+            self.model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo") # Get model name
         else:
             self.api_key = ""
-            self.ai_service_type = "openai"  # Default to openai if no gemini key
+            self.ai_service_type = "gemini" # Default to gemini
+            self.model_name = "gemini-2.5-flash" # Default model name
 
     def add_card(self, word: str, sentence: str, language: str) -> str:
         """Adds a new flashcard to the vocabulary database.
@@ -137,7 +144,7 @@ class MorphCardsDemo:
         Returns:
             A string message summarizing the review outcome, including the new
             sentence, next review date, and updated FSRS parameters.
-            Returns an error message if no card is selected or the rating is invalid.
+            Returns an.error message if no card is selected or the rating is invalid.
         """
         if not self.current_card:
             return "No card to review. Please start a review first."
@@ -154,7 +161,7 @@ class MorphCardsDemo:
 
         try:
             # Process review
-            ai_service = AIServiceFactory.create_service(self.ai_service_type)
+            ai_service = AIServiceFactory.create_service(self.ai_service_type, self.model_name)
 
             updated_card, review_log = self.scheduler.review_card(
                 card=self.current_card,
@@ -340,11 +347,11 @@ def create_demo_interface() -> gr.Interface:
             with gr.Row():
                 api_key_input = gr.Textbox(
                     label="API Key",
-                    placeholder="Enter your OpenAI or Gemini API key",
+                    placeholder="Enter your Gemini API key",
                     type="password",
                 )
                 service_select = gr.Dropdown(
-                    choices=["openai", "gemini"], value="openai", label="AI Service"
+                    choices=["gemini"], value="gemini", label="AI Service"
                 )
                 set_key_btn = gr.Button("Set API Key")
 
@@ -380,7 +387,7 @@ def create_demo_interface() -> gr.Interface:
             )
             submit_btn = gr.Button("Submit Rating", variant="primary")
             skip_btn = gr.Button(
-                "Move Forward By 1 Day", variant="secondary"
+                "Move Forward By 1 Day", variant="secondary" 
             )  # Renamed button
 
             review_output = gr.Textbox(label="Review Result", interactive=False)
@@ -416,7 +423,7 @@ def create_demo_interface() -> gr.Interface:
             )
 
             skip_btn.click(
-                demo.skip_to_next_day, outputs=[review_output, current_date_display]
+                demo.skip_to_next_day, outputs=[review_output, current_date_display] 
             )  # Update current_date_display
 
         with gr.Tab("Statistics"):
@@ -437,7 +444,7 @@ def create_demo_interface() -> gr.Interface:
     return interface
 
 
-def main() -> None:
+def main() -> gr.Interface:
     """Runs the MorphCards demo interface.
 
     This function initializes the Gradio interface and launches it,

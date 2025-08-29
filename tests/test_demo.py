@@ -143,6 +143,7 @@ class TestMorphCardsDemo:
         # Setup
         demo.api_key = "fake_api_key"
         demo.ai_service_type = "openai"
+        demo.model_name = "gpt-3.5-turbo" # Set model name for test
 
         patch(
             "morphcards.core.FSRSScheduler._generate_new_sentence",
@@ -417,6 +418,7 @@ class TestMorphCardsDemo:
             # Ensure API key is set for the demo instance
             demo.api_key = "test_api_key"
             demo.ai_service_type = "gemini"
+            demo.model_name = "gemini-2.5-flash" # Set model name for test
 
             # Mock get_learned_vocabulary to ensure AI service is called
             demo.db.get_learned_vocabulary = MagicMock(

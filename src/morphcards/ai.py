@@ -83,9 +83,10 @@ class AIService(ABC):
 class OpenAIService(AIService):
     """OpenAI API service for generating sentence variations."""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "gpt-3.5-turbo"):
         """Initializes the OpenAIService."""
         self.client: Optional[openai.OpenAI] = None
+        self.model_name = model_name
 
     def generate_sentence_variation(
         self,
@@ -119,74 +120,34 @@ class OpenAIService(AIService):
             word, learned_vocabulary, language, rating, additional_instruction
         )  # Pass rating
 
-        # Define a preferred order of models (most capable to least capable/cheapest)
-        preferred_model_families = ["gpt-4", "gpt-3.5-turbo"]
-
-        # Get all available models and filter for chat completion capabilities
-        available_models = []
         try:
-            for m in self.client.models.list():
-                # Check if the model is a chat completion model
-                # This is a heuristic, as OpenAI API doesn't expose a direct capability for this
-                if m.id.startswith(("gpt-4", "gpt-3.5-turbo")):
-                    available_models.append(m.id)
+            print(f"Attempting to generate content with OpenAI model: {self.model_name}")
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a language learning assistant. Generate natural, grammatically correct sentences.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=100,
+                temperature=0.9,
+            )
+
+            # Extract and clean response
+            sentence = response.choices[0].message.content.strip()
+
+            # Remove quotes if present
+            if sentence.startswith('"') and sentence.endswith('"'):
+                sentence = sentence[1:-1]
+
+            return sentence
+
         except Exception as e:
-            print(f"Error listing OpenAI models: {e}")
-            # If listing models fails, fall back to hardcoded preferred models
-            available_models = preferred_model_families
-
-        # Create a prioritized list of models to try
-        models_to_try = []
-        for preferred_family in preferred_model_families:
-            # Find the latest version of the preferred family
-            matching_models = sorted(
-                [m for m in available_models if m.startswith(preferred_family)],
-                reverse=True,
-            )  # Sort to get latest version first
-            if matching_models:
-                models_to_try.append(matching_models[0])
-
-        # Add any other available models that support chat completion, not in preferred_models
-        for model_name in available_models:
-            if model_name not in models_to_try:
-                models_to_try.append(model_name)
-
-        if not models_to_try:
-            print("No suitable OpenAI models found that support chat completion.")
+            print(f"Error with OpenAI model {self.model_name}: {e}")
+            # Fallback to a simple template if all models fail
             return f"I am learning the word '{word}' in {language}'."
-
-        for model_name in models_to_try:
-            try:
-                print(f"Attempting to generate content with OpenAI model: {model_name}")
-                response = self.client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a language learning assistant. Generate natural, grammatically correct sentences.",
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    max_tokens=100,
-                    temperature=0.9,
-                )
-
-                # Extract and clean response
-                sentence = response.choices[0].message.content.strip()
-
-                # Remove quotes if present
-                if sentence.startswith('"') and sentence.endswith('"'):
-                    sentence = sentence[1:-1]
-
-                return sentence
-
-            except Exception as e:
-                print(f"Error with OpenAI model {model_name}: {e}")
-                # Continue to next fallback model
-                continue
-
-        # Fallback to a simple template if all models fail
-        return f"I am learning the word '{word}' in {language}'."
 
     def _handle_rate_limit(self, retry_after: int) -> None:
         """Handles API rate limiting by pausing execution.
@@ -200,9 +161,10 @@ class OpenAIService(AIService):
 class GeminiService(AIService):
     """Google Gemini API service for generating sentence variations."""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "gemini-2.5-flash"):
         """Initializes the GeminiService."""
         self.client: Optional[genai.GenerativeModel] = None
+        self.model_name = model_name
 
     def generate_sentence_variation(
         self,
@@ -232,73 +194,41 @@ class GeminiService(AIService):
             word, learned_vocabulary, language, rating, additional_instruction
         )  # Pass rating
 
-        # Define a preferred order of models (most capable to least capable/cheapest)
-        # These are common and generally available models.
-        preferred_model_families = [
-            "models/gemini-2.5-flash-lite",
-            "models/gemini-1.5-flash-lite",
-            "models/gemini-1.5-pro",
-        ]
+        try:
+            print(f"Attempting to generate content with Gemini model: {self.model_name}")
+            # Initialize client with API key and current model
+            self.client = _get_gemini_client(api_key, self.model_name)
 
-        # Get all available models and filter for text generation capabilities
-        available_models = []
-        for m in genai.list_models():
-            if "generateContent" in m.supported_generation_methods:
-                available_models.append(m.name)
+            # Generate response
+            response = self.client.generate_content(
+                prompt, generation_config={"temperature": 0.9}
+            )
 
-        # Create a prioritized list of models to try
-        models_to_try = []
-        for preferred_family in preferred_model_families:
-            # Find the latest version of the preferred family
-            matching_models = sorted(
-                [m for m in available_models if m.startswith(preferred_family)],
-                reverse=True,
-            )  # Sort to get latest version first
-            if matching_models:
-                models_to_try.append(matching_models[0])
+            # Extract and clean response
+            sentence = response.text.strip()
 
-        if not models_to_try:
-            print("No suitable Gemini models found that support content generation.")
+            # Remove quotes if present
+            if sentence.startswith('"') and sentence.endswith('"'):
+                sentence = sentence[1:-1]
+
+            return sentence
+
+        except Exception as e:
+            print(f"Error with Gemini model {self.model_name}: {e}")
+            # Fallback to a simple template if all models fail
             return f"I am learning the word '{word}' in {language}'."
-
-        for model_name in models_to_try:
-            try:
-                print(f"Attempting to generate content with Gemini model: {model_name}")
-                # Initialize client with API key and current model
-                self.client = _get_gemini_client(api_key, model_name)
-
-                # Generate response
-                response = self.client.generate_content(
-                    prompt, generation_config={"temperature": 0.9}
-                )
-
-                # Extract and clean response
-                sentence = response.text.strip()
-
-                # Remove quotes if present
-                if sentence.startswith('"') and sentence.endswith('"'):
-                    sentence = sentence[1:-1]
-
-                return sentence
-
-            except Exception as e:
-                print(f"Error with Gemini model {model_name}: {e}")
-                # Continue to next fallback model
-                continue
-
-        # Fallback to a simple template if all models fail
-        return f"I am learning the word '{word}' in {language}'."
 
 
 class AIServiceFactory:
     """Factory for creating AI service instances."""
 
     @staticmethod
-    def create_service(service_type: str) -> AIService:
+    def create_service(service_type: str, model_name: Optional[str] = None) -> AIService:
         """Creates an instance of an AI service based on the specified type.
 
         Args:
             service_type: The type of AI service to create ("openai" or "gemini").
+            model_name: The specific model name to use (e.g., "gpt-3.5-turbo", "gemini-2.5-flash").
 
         Returns:
             An instance of a concrete AIService implementation.
@@ -307,9 +237,9 @@ class AIServiceFactory:
             ValueError: If an unknown AI service type is provided.
         """
         if service_type.lower() == "openai":
-            return OpenAIService()
+            return OpenAIService(model_name=model_name)
         elif service_type.lower() == "gemini":
-            return GeminiService()
+            return GeminiService(model_name=model_name)
         else:
             raise ValueError(f"Unknown AI service type: {service_type}")
 

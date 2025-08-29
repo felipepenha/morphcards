@@ -2,9 +2,7 @@
 
 **Spaced Spatial Repetition (SSR) software with AI-generated sentence variations for language learning.**
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PyPI version](https://badge.fury.io/py/morphcards.svg)](https://badge.fury.io/py/morphcards)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![PyPI version](https://badge.fury.io/py/morphcards.svg)](https://badge.fury.io/py/morphcards)
 
 ## 🎯 Overview
 
@@ -24,7 +22,10 @@ Traditional SSR software often repeats the exact same sentence cards, leading us
 ```bash
 # .env file
 GEMINI_API_KEY=your-gemini-api-key-here
-# OPENAI_API_KEY=your-openai-api-key-here  # Uncomment for OpenAI
+GEMINI_MODEL_NAME=gemini-2.5-flash # Example: gemini-2.5-flash, gemini-1.5-pro, gemini-1.5-flash
+
+OPENAI_API_KEY=your-openai-api-key-here  # Uncomment for OpenAI
+OPENAI_MODEL_NAME=gpt-3.5-turbo # Example: gpt-4, gpt-3.5-turbo
 ```
 
 **For OpenAI users**: Replace `GEMINI_API_KEY` with `OPENAI_API_KEY` in your `.env` file.
@@ -101,7 +102,7 @@ from datetime import datetime
 # Initialize components
 db = VocabularyDatabase()
 scheduler = Scheduler()
-ai_service = AIServiceFactory.create_service("openai")
+ai_service = AIServiceFactory.create_service("openai", model_name="gpt-3.5-turbo") # Example with model_name
 
 # Create a card
 card = Card(
@@ -135,7 +136,7 @@ print(f"New sentence: {updated_card.sentence}")
 morphcards add "bonjour" "Bonjour, comment allez-vous?" --language French
 
 # Review due cards (uses .env file)
-morphcards review --ai-service gemini
+morphcards review --ai-service gemini --model-name gemini-2.5-flash
 
 # Show statistics
 morphcards stats
@@ -173,22 +174,21 @@ For detailed architecture diagrams and system design, see [Architecture Document
 ```bash
 # Google Gemini API (recommended)
 export GEMINI_API_KEY="your-gemini-key"
+export GEMINI_MODEL_NAME="gemini-2.5-flash" # Example: gemini-2.5-flash, gemini-1.5-pro, gemini-1.5-flash
 
 # OpenAI API (alternative)
 export OPENAI_API_KEY="your-openai-key"
+export OPENAI_MODEL_NAME="gpt-3.5-turbo" # Example: gpt-4, gpt-3.5-turbo
 ```
 
 ### API Service Selection
 
 ```python
 # Choose AI service (Gemini recommended)
-ai_service = AIServiceFactory.create_service("gemini")  # or "openai"
+ai_service = AIServiceFactory.create_service("gemini", model_name="gemini-2.5-flash")
 
-# Custom Gemini model
-gemini_service = GeminiService(model="gemini-pro")
-
-# Custom OpenAI model
-openai_service = OpenAIService(model="gpt-4")
+# Choose AI service (OpenAI alternative)
+ai_service = AIServiceFactory.create_service("openai", model_name="gpt-4")
 ```
 
 ## 🐳 Containerization

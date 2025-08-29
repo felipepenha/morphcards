@@ -168,10 +168,8 @@ graph LR
     Scheduler --> VocabDB
     Scheduler --> AIService
     
-    VocabDB --> DuckDB
-    
-    AIService --> OpenAIService
-    AIService --> GeminiService
+    VocabDB --> OpenAIService
+    VocabDB --> GeminiService
     
     CLI --> Scheduler
     Demo --> Scheduler
@@ -265,9 +263,11 @@ podman run --rm -p 8080:7860 \
 ```bash
 # For Gemini users (default)
 GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL_NAME=gemini-2.5-flash # Example: gemini-2.5-flash, gemini-1.5-pro, gemini-1.5-flash
 
 # For OpenAI users
-# OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL_NAME=gpt-3.5-turbo # Example: gpt-4, gpt-3.5-turbo
 ```
 
 **Note**: This documentation assumes Gemini is being used. For OpenAI users, use `OPENAI_API_KEY` instead of `GEMINI_API_KEY` in your `.env` file.

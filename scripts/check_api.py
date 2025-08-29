@@ -20,7 +20,8 @@ def check_openai_connectivity(api_key: str) -> bool:
         print("OpenAI library not installed. Skipping OpenAI connectivity check.")
         return False
     try:
-        ai_service = AIServiceFactory.create_service("openai")
+        openai_model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo") # Get model name
+        ai_service = AIServiceFactory.create_service("openai", openai_model_name) # Pass model name
         dummy_sentence = ai_service.generate_sentence_variation(
             word="test", learned_vocabulary=["hello", "world"], api_key=api_key, language="English"
         )
@@ -39,7 +40,8 @@ def check_gemini_connectivity(api_key: str) -> bool:
         print("Google Generative AI library not installed. Skipping Gemini connectivity check.")
         return False
     try:
-        ai_service = AIServiceFactory.create_service("gemini")
+        gemini_model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash") # Get model name
+        ai_service = AIServiceFactory.create_service("gemini", gemini_model_name) # Pass model name
         dummy_sentence = ai_service.generate_sentence_variation(
             word="test", learned_vocabulary=["hello", "world"], api_key=api_key, language="English"
         )

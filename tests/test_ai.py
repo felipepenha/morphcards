@@ -12,11 +12,11 @@ class TestAIServiceFactory:
         assert "gemini" in services
 
     def test_create_openai_service(self) -> None:
-        service = AIServiceFactory.create_service("openai")
+        service = AIServiceFactory.create_service("openai", "gpt-3.5-turbo") # Pass dummy model name
         assert service is not None
 
     def test_create_gemini_service(self) -> None:
-        service = AIServiceFactory.create_service("gemini")
+        service = AIServiceFactory.create_service("gemini", "gemini-2.5-flash") # Pass dummy model name
         assert service is not None
 
     def test_create_invalid_service(self) -> None:
