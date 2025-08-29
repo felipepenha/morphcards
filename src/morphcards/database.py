@@ -98,6 +98,22 @@ class VocabularyDatabase:
     def update_card(self, card: Card) -> None:
         self.add_card(card)
 
+    def update_card_sentence(self, card_id: str, new_sentence: str) -> None:
+        """Updates only the sentence for a specific card.
+
+        Args:
+            card_id: The ID of the card to update.
+            new_sentence: The new sentence to set for the card.
+        """
+        self.connection.execute(
+            """
+            UPDATE cards
+            SET sentence = ?
+            WHERE id = ?
+            """,
+            (new_sentence, card_id),
+        )
+
     def get_card(self, card_id: str) -> Optional[Card]:
         result = self.connection.execute(
             """

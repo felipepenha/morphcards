@@ -27,8 +27,9 @@ class MorphCardsDemo:
         Sets up the database, FSRS scheduler, and attempts to load API keys
         from environment variables for AI service integration.
         """
-        self.db = VocabularyDatabase()
-        self.scheduler = FSRSScheduler()
+        db_path = "morphcards_demo.db"
+        self.db = VocabularyDatabase(db_path=db_path)
+        self.scheduler = FSRSScheduler(db_path=db_path)
         self.current_card: Optional[Card] = None
         self.current_time: datetime = datetime.now(timezone.utc)  # Added current_time
         self.mastered_words_override: Optional[List[str]] = (
@@ -146,9 +147,9 @@ class MorphCardsDemo:
             rating_input: The user's rating as a string (1-4).
 
         Returns:
-            A string message summarizing the review outcome, including the new
-            sentence, next review date, and updated FSRS parameters.
-            Returns an.error message if no card is selected or the rating is invalid.
+            A string message summarizing the review outcome, including the
+            next review date and updated FSRS parameters. The AI sentence
+            generation is triggered in the background and not displayed here.
         """
         if not self.current_card:
             return "No card to review. Please start a review first."
@@ -164,29 +165,24 @@ class MorphCardsDemo:
             return "Please set your API key first."
 
         try:
-            # Process review
-            ai_service = AIServiceFactory.create_service(
-                self.ai_service_type, self.model_name
-            )
-
+            # The review_card method now handles AI generation in the background.
             updated_card, review_log = self.scheduler.review_card(
                 card=self.current_card,
                 rating=rating,
-                now=self.current_time,  # Use current_time
+                now=self.current_time,
+                ai_service_type=self.ai_service_type,
+                model_name=self.model_name,
                 ai_api_key=self.api_key,
-                vocabulary_database=self.db,
-                ai_service=ai_service,
-                language=self.current_card.language,  # Pass the language here
-                mastered_words_override=self.mastered_words_override,  # Pass the override here
+                mastered_words_override=self.mastered_words_override,
             )
 
-            # Update database
+            # Update database with the new card state and review log.
             self.db.update_card(updated_card)
             self.db.add_review_log(review_log)
 
             result = "Review completed!\n\n"
             result += f"Word: {updated_card.word}\n"
-            result += f"New sentence: {updated_card.sentence}\n"
+            # The "New sentence" is no longer displayed as it's generated in the background.
             result += (
                 f"Next review: {updated_card.due_date.strftime('%Y-%m-%d %H:%M')}\n"
             )
@@ -200,7 +196,6 @@ class MorphCardsDemo:
             import traceback
 
             traceback.print_exc()
-            print(f"Error during review: {e}")  # Added print statement
             return f"Error during review: {str(e)}"
 
     def skip_to_next_day(self) -> str:

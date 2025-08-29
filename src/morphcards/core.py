@@ -104,20 +104,29 @@ class ReviewLog(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+import threading
+
+from .database import VocabularyDatabase
+
+
 class FSRSScheduler:
     """Manages the spaced repetition scheduling using the FSRS algorithm.
 
     This class handles the logic for updating card parameters (stability, difficulty,
-    and due date) based on user ratings and generates new sentences for review.
+    and due date) based on user ratings. To improve UI responsiveness, it triggers
+    AI sentence generation in a background thread after a review is submitted.
     """
 
-    def __init__(self, parameters: Optional[List[float]] = None):
+    def __init__(self, db_path: str, parameters: Optional[List[float]] = None) -> None:
         """Initializes the FSRSScheduler.
 
         Args:
+            db_path: The path to the DuckDB database file. This is stored to allow
+                     background threads to create their own database connections.
             parameters: Optional list of custom FSRS parameters. If None,
                         default parameters for FSRS v4.0.0 are used.
         """
+        self.db_path = db_path
         self._fsrs: Scheduler
 
         if parameters is None:
@@ -147,32 +156,90 @@ class FSRSScheduler:
         else:
             self._fsrs = Scheduler(parameters=parameters)
 
+    def _generate_new_sentence_async(
+        self,
+        card: Card,
+        rating: Rating,
+        ai_service_type: str,
+        model_name: str,
+        api_key: str,
+        mastered_words_override: Optional[List[str]],
+    ) -> None:
+        """
+        Generates and saves a new sentence in a background thread.
+
+        This method is designed to run asynchronously to prevent blocking the main
+        application thread and UI. It creates its own thread-safe database
+        connection and AI service instance.
+
+        Args:
+            card: The card for which to generate a new sentence.
+            rating: The user's rating for the last review.
+            ai_service_type: The type of AI service to use (e.g., "gemini").
+            model_name: The specific AI model to use for generation.
+            api_key: The API key for the AI service.
+            mastered_words_override: An optional list of words to force for generation.
+        """
+        # Create a new, thread-local database connection to ensure thread safety.
+        from .ai import AIServiceFactory  # Local import to prevent circular dependency
+
+        db_for_thread = VocabularyDatabase(self.db_path)
+        ai_service = AIServiceFactory.create_service(ai_service_type, model_name)
+
+        try:
+            # Determine the vocabulary to use for sentence generation.
+            if mastered_words_override is not None:
+                learned_words = mastered_words_override
+            else:
+                learned_words = db_for_thread.get_learned_vocabulary()
+
+            # Only generate a new sentence if there's a sufficient vocabulary base.
+            if len(learned_words) >= 5:
+                new_sentence = ai_service.generate_sentence_variation(
+                    word=card.word,
+                    learned_vocabulary=learned_words,
+                    api_key=api_key,
+                    language=card.language,
+                    rating=rating,
+                )
+                # The new sentence is saved for the *next* review.
+                db_for_thread.update_card_sentence(card.id, new_sentence)
+
+        except Exception as e:
+            # In a real application, this should use a proper logger.
+            print(f"Error generating sentence in background: {e}")
+        finally:
+            # Ensure the thread-local connection is closed.
+            db_for_thread.close()
+
     def review_card(
         self,
         card: Card,
         rating: Union[Rating, int],
         now: datetime,
+        ai_service_type: str,
+        model_name: str,
         ai_api_key: str,
-        vocabulary_database: "VocabularyDatabase",
-        ai_service: "AIService",
-        language: str,
         mastered_words_override: Optional[List[str]] = None,
     ) -> Tuple[Card, ReviewLog]:
-        """Processes a card review, updates its FSRS parameters, and generates a new sentence.
+        """
+        Processes a card review, updates FSRS parameters, and spawns a background
+        task to generate the next sentence.
+
+        This method returns immediately after calculating the next review schedule,
+        while the AI generation happens asynchronously.
 
         Args:
             card: The current state of the card being reviewed.
             rating: The user's recall rating (1-4).
             now: The current timestamp of the review.
-            ai_api_key: API key for the AI service.
-            vocabulary_database: The database instance to retrieve learned vocabulary.
-            ai_service: The AI service instance for sentence generation.
-            language: The language of the card.
-            mastered_words_override: Optional list of words to use for AI sentence generation.
+            ai_service_type: The type of AI service for the background task.
+            model_name: The AI model name for the background task.
+            ai_api_key: API key for the AI service for the background task.
+            mastered_words_override: Optional list of words for AI generation.
 
         Returns:
-            A tuple containing the updated Card object and a ReviewLog entry
-            for the current review.
+            A tuple containing the updated Card object and a ReviewLog entry.
         """
         rating_int = rating.value if isinstance(rating, Rating) else rating
 
@@ -194,30 +261,16 @@ class FSRSScheduler:
             ),
         )
 
-        updated_fsrs_card, fsrs_review_log = self._fsrs.review_card(
+        updated_fsrs_card, _ = self._fsrs.review_card(
             fsrs_card, FSRS_Rating(rating_int), now.replace(tzinfo=timezone.utc), None
         )
 
-        new_sentence = self._generate_new_sentence(
-            card.word,
-            card.original_sentence,
-            vocabulary_database,
-            ai_service,
-            ai_api_key,
-            Rating(rating_int),
-            language,
-            mastered_words_override,
-        )
-
-        # Determine which sentence to use for the updated card
-        sentence_to_use = (
-            new_sentence if card.review_count > 0 else card.original_sentence
-        )
-
+        # The sentence displayed to the user is the one from the current card.
+        # The *next* sentence is generated in the background.
         updated_card = Card(
             id=card.id,
             word=card.word,
-            sentence=sentence_to_use,  # Modified line
+            sentence=card.sentence,  # Keep the current sentence for this review
             original_sentence=card.original_sentence,
             stability=updated_fsrs_card.stability,
             difficulty=updated_fsrs_card.difficulty,
@@ -243,58 +296,19 @@ class FSRSScheduler:
             difficulty=updated_fsrs_card.difficulty,
         )
 
+        # After the main logic is done, kick off the AI generation
+        # in a background thread to avoid blocking the UI.
+        thread = threading.Thread(
+            target=self._generate_new_sentence_async,
+            args=(
+                updated_card,
+                Rating(rating_int),
+                ai_service_type,
+                model_name,
+                ai_api_key,
+                mastered_words_override,
+            ),
+        )
+        thread.start()
+
         return updated_card, review_log
-
-    def _generate_new_sentence(
-        self,
-        word: str,
-        original_sentence: str,
-        vocabulary_database: "VocabularyDatabase",
-        ai_service: "AIService",
-        api_key: str,
-        rating: Rating,
-        language: str,
-        mastered_words_override: Optional[List[str]] = None,
-    ) -> str:
-        """Generates a new sentence variation using an AI service.
-
-        If the learned vocabulary is insufficient or an error occurs during AI generation,
-        the original sentence is returned as a fallback.
-
-        Args:
-            word: The word for which to generate a new sentence.
-            original_sentence: The original sentence associated with the word.
-            vocabulary_database: The database instance to retrieve learned vocabulary.
-            ai_service: The AI service instance to use for generation.
-            api_key: The API key for the AI service.
-            rating: The user's rating for the card.
-            language: The language of the card.
-            mastered_words_override: Optional list of words to use for AI sentence generation.
-
-        Returns:
-            A new AI-generated sentence, or the original sentence if generation fails.
-        """
-        try:
-            if mastered_words_override is not None:
-                learned_words = mastered_words_override
-            else:
-                learned_words = vocabulary_database.get_learned_vocabulary()
-
-            if len(learned_words) < 5:
-                return original_sentence
-
-            new_sentence = ai_service.generate_sentence_variation(
-                word=word,
-                learned_vocabulary=learned_words,
-                api_key=api_key,
-                language=language,
-                rating=rating,
-            )
-
-            return new_sentence
-
-        except Exception as e:
-            print(
-                f"DEBUG: Error generating new sentence: {e}. Falling back to original sentence."
-            )
-            return original_sentence

@@ -58,37 +58,33 @@ graph TB
 
 ## Data Flow Architecture
 
+The data flow for reviewing a card is designed to be highly responsive. When a user submits a review, the core scheduling logic is executed immediately, and the UI receives a quick confirmation. The generation of the *next* sentence variation, which is a slow network operation, is handled asynchronously in a background thread. This ensures the user is not blocked and can proceed to the next card without delay.
+
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI
+    participant UI
     participant Scheduler
+    participant BackgroundThread
     participant AI
     participant Database
-    participant API
     
-    User->>CLI: Add new card
-    CLI->>Database: Store card
-    Database-->>CLI: Confirmation
+    User->>UI: Submit review for Card A
+    UI->>Scheduler: review_card(Card A, rating)
+    Scheduler->>Database: Update FSRS state for Card A
+    Database-->>Scheduler: Confirmation
+    Scheduler-->>UI: Return updated schedule for Card A
+    UI-->>User: Show next card (Card B)
     
-    User->>CLI: Review card
-    CLI->>Scheduler: Process review
-    Scheduler->>Database: Get learned vocabulary
-    Database-->>Scheduler: Vocabulary list
-    
-    alt Vocabulary sufficient
-        Scheduler->>AI: Generate new sentence
-        AI->>API: API call
-        API-->>AI: New sentence
-        AI-->>Scheduler: Generated sentence
-    else Vocabulary insufficient
-        Scheduler->>Scheduler: Use original sentence
+    par Asynchronous AI Generation
+        Scheduler-)+BackgroundThread: spawn(Card A data, vocab)
+        BackgroundThread->>Database: Create new DB connection
+        BackgroundThread->>AI: generate_sentence()
+        AI-->>BackgroundThread: new_sentence
+        BackgroundThread->>Database: Save new_sentence for Card A
+        BackgroundThread->>Database: Close DB connection
+        deactivate BackgroundThread
     end
-    
-    Scheduler->>Database: Update card
-    Scheduler->>Database: Store review log
-    Scheduler-->>CLI: Review results
-    CLI-->>User: New sentence & next review date
 ```
 
 ## Database Schema
@@ -220,10 +216,11 @@ graph TB
 3. **Dependency Inversion**: High-level modules don't depend on low-level modules
 4. **Single Responsibility**: Each class has one reason to change
 5. **Open/Closed Principle**: Open for extension, closed for modification
+6. **Responsive UI**: Slow operations like API calls are handled in background threads to prevent blocking the user interface.
 
 ## Performance Characteristics
 
-- **API Response Time**: < 1 second for AI sentence generation
+- **API Response Time**: < 1 second for AI sentence generation (asynchronous)
 - **Database Operations**: In-memory DuckDB for fast access
 - **Memory Usage**: Efficient storage with minimal overhead
 - **Scalability**: Modular design allows for easy scaling
