@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "morphcards"
-version = "0.1.1"
+version = "0.1.2"
 description = "Spaced Spatial Repetition software with AI-generated sentence variations for language learning"
 readme = "README.md"
 license = {file = "LICENSE"}
