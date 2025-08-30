@@ -33,20 +33,6 @@ pip install morphcards
 pip install morphcards[demo]
 ```
 
-### Environment Variables
-
-**This documentation assumes Gemini is being used by default.** All examples assume you have a `.env` file with your API keys.
-
-**Create a `.env` file in your project root:**
-```bash
-# .env file
-GEMINI_API_KEY=your-gemini-api-key-here
-GEMINI_MODEL_NAME=gemini-2.5-flash # Example: gemini-2.5-flash, gemini-1.5-pro, gemini-1.5-flash
-
-#OPENAI_API_KEY=your-openai-api-key-here  # Uncomment for OpenAI
-#OPENAI_MODEL_NAME=gpt-3.5-turbo # Example: gpt-4, gpt-3.5-turbo
-```
-
 ### Basic Usage
 
 ```python
