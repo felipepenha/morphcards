@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -140,7 +140,7 @@ class MorphCardsDemo:
             "Enter your rating (1-4):",
         )
 
-    def submit_review(self, rating_input: str) -> str:
+    def submit_review(self, rating_input: str) -> Union[str, Tuple[str, Card]]:
         """Submits the user's review rating for the current card.
 
         Args:
@@ -190,7 +190,7 @@ class MorphCardsDemo:
             result += f"Difficulty: {updated_card.difficulty:.2f}"
 
             self.current_card = None
-            return result
+            return result, updated_card
 
         except Exception as e:
             import traceback
@@ -388,7 +388,7 @@ def create_demo_interface() -> gr.Interface:
             )
             submit_btn = gr.Button("Submit Rating", variant="primary")
             skip_btn = gr.Button(
-                "Move Forward By 1 Day", variant="secondary"
+                "Move Forward By 1 Day", variant="secondary" 
             )  # Renamed button
 
             review_output = gr.Textbox(label="Review Result", interactive=False)
@@ -424,7 +424,7 @@ def create_demo_interface() -> gr.Interface:
             )
 
             skip_btn.click(
-                demo.skip_to_next_day, outputs=[review_output, current_date_display]
+                demo.skip_to_next_day, outputs=[review_output, current_date_display] 
             )  # Update current_date_display
 
         with gr.Tab("Statistics"):

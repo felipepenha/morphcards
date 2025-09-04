@@ -140,14 +140,14 @@ class VocabularyDatabase:
             )
         return None
 
-    def get_card_by_word(self, word: str) -> Optional[Card]:
+    def get_card_by_word(self, word: str, language: str) -> Optional[Card]:
         result = self.connection.execute(
             """
             SELECT id, word, sentence, original_sentence, stability, difficulty,
                    due_date, created_at, last_reviewed, review_count, language
-            FROM cards WHERE word = ?
+            FROM cards WHERE word = ? AND language = ?
         """,
-            (word,),
+            (word, language),
         ).fetchone()
 
         if result:
@@ -166,15 +166,19 @@ class VocabularyDatabase:
             )
         return None
 
-    def get_due_cards(self, now: datetime) -> List[Card]:
-        results = self.connection.execute(
-            """
+    def get_due_cards(self, now: datetime, language: Optional[str] = None) -> List[Card]:
+        query = """
             SELECT id, word, sentence, original_sentence, stability, difficulty,
                    due_date, created_at, last_reviewed, review_count, language
             FROM cards WHERE due_date <= ?
-        """,
-            (now,),
-        ).fetchall()
+        """
+        params = [now]
+
+        if language:
+            query += " AND language = ?"
+            params.append(language)
+
+        results = self.connection.execute(query, params).fetchall()
 
         cards = []
         for result in results:
@@ -258,33 +262,67 @@ class VocabularyDatabase:
 
         return review_logs
 
-    def get_learned_vocabulary(self) -> List[str]:
+    def get_learned_vocabulary(self, language: str) -> List[str]:
         results = self.connection.execute(
             """
-            SELECT word FROM vocabulary WHERE mastery_level = 1 ORDER BY first_seen
-        """
+            SELECT v.word
+            FROM vocabulary v
+            JOIN cards c ON v.word = c.word
+            WHERE v.mastery_level = 1 AND c.language = ?
+            ORDER BY v.first_seen
+            """,
+            (language,),
         ).fetchall()
 
         return [result[0] for result in results]
 
-    def get_vocabulary_stats(self) -> Dict[str, Any]:
-        total_words = self.connection.execute(
-            """
-            SELECT COUNT(*) FROM vocabulary
-        """
-        ).fetchone()[0]
+    def get_vocabulary_stats(self, language: Optional[str] = None) -> Dict[str, Any]:
+        if language:
+            total_words = self.connection.execute(
+                """
+                SELECT COUNT(DISTINCT c.word)
+                FROM cards c
+                WHERE c.language = ?
+                """,
+                (language,),
+            ).fetchone()[0]
 
-        total_cards = self.connection.execute(
-            """
-            SELECT COUNT(*) FROM cards
-        """
-        ).fetchone()[0]
+            total_cards = self.connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM cards
+                WHERE language = ?
+                """,
+                (language,),
+            ).fetchone()[0]
 
-        total_reviews = self.connection.execute(
+            total_reviews = self.connection.execute(
+                """
+                SELECT COUNT(rl.id)
+                FROM review_logs rl
+                JOIN cards c ON rl.card_id = c.id
+                WHERE c.language = ?
+                """,
+                (language,),
+            ).fetchone()[0]
+        else:
+            total_words = self.connection.execute(
+                """
+                SELECT COUNT(*) FROM vocabulary
             """
-            SELECT COUNT(*) FROM review_logs
-        """
-        ).fetchone()[0]
+            ).fetchone()[0]
+
+            total_cards = self.connection.execute(
+                """
+                SELECT COUNT(*) FROM cards
+            """
+            ).fetchone()[0]
+
+            total_reviews = self.connection.execute(
+                """
+                SELECT COUNT(*) FROM review_logs
+            """
+            ).fetchone()[0]
 
         return {
             "total_words": total_words,

@@ -46,7 +46,7 @@ class TestVocabularyDatabase:
             )
             db.add_card(card)
 
-            retrieved_card = db.get_card_by_word("hello")
+            retrieved_card = db.get_card_by_word("hello", "English")
             assert retrieved_card is not None
             assert retrieved_card.word == "hello"
         finally:
@@ -76,7 +76,7 @@ class TestVocabularyDatabase:
             )
             db.add_review_log(review_log)
 
-            vocab = db.get_learned_vocabulary()
+            vocab = db.get_learned_vocabulary("English")
             assert "world" in vocab
         finally:
             db.close()

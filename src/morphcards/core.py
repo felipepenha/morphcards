@@ -191,7 +191,7 @@ class FSRSScheduler:
             if mastered_words_override is not None:
                 learned_words = mastered_words_override
             else:
-                learned_words = db_for_thread.get_learned_vocabulary()
+                learned_words = db_for_thread.get_learned_vocabulary(card.language)
 
             # Only generate a new sentence if there's a sufficient vocabulary base.
             if len(learned_words) >= 5:
